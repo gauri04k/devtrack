@@ -1,6 +1,6 @@
 package com.devtrack.dto.response;
 
-import java.time.LocalDateTime;
+import com.devtrack.enums.ProjectStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,16 +8,20 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserResponse {
-	
-	private Long id;
-	private String name;
-	private String email;
-	private LocalDateTime createdAt;
+public class ProjectResponse {
+
+    private Long id;
+
+    private String title;
+
+    private String description;
+
+    private ProjectStatus status;
 
 }

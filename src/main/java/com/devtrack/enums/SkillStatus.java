@@ -4,5 +4,4 @@ public enum SkillStatus {
       LEARNING,
       COMPLETED,
       PAUSED
-      
 }

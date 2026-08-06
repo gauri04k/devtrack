@@ -1,6 +1,8 @@
 package com.devtrack.dto.response;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
+
+import com.devtrack.enums.SkillStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,11 +15,14 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserResponse {
-	
-	private Long id;
-	private String name;
-	private String email;
-	private LocalDateTime createdAt;
+public class SkillResponse {
+
+    private Long id;
+
+    private String name;
+
+    private SkillStatus status;
+
+    private LocalDate targetDate;
 
 }
