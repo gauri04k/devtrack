@@ -12,6 +12,8 @@ import com.devtrack.service.SkillService;
 
 import jakarta.validation.Valid;
 
+
+
 @RestController
 @RequestMapping("/api/users/{userId}/skills")
 @Validated
@@ -23,13 +25,13 @@ public class SkillController {
         this.skillService = skillService;
     }
 
-    // Create Skill
+    // skill creations
     @PostMapping
     public SkillResponse createSkill(@PathVariable Long userId,@Valid @RequestBody SkillRequest request) {
         return skillService.createSkill(userId, request);
     }
 
-    // Get All Skills
+    // to Get All Skills
     @GetMapping
     public List<SkillResponse> getAllSkills(@PathVariable Long userId) {
         return skillService.getAllSkills(userId);

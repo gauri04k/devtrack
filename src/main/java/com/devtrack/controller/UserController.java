@@ -27,9 +27,8 @@ public class UserController {
 	
     private final UserService userService;
     
-    //if we use new keyword here ..may loose the benefits of ioc 
-    //and dependency injection
-    
+    //if we use new keyword here ..may loose the benefits of ioc  and di
+   
     public UserController(UserService userService) {
     	this.userService = userService;
     }
