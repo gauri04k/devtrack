@@ -10,15 +10,9 @@ import lombok.Data;
 @Data
 @Builder
 public class MilestoneResponse {
-
     private Long id;
-
     private String title;
-
     private MilestoneStatus status;
-
     private LocalDate dueDate;
-
     private Long projectId;
-
 }

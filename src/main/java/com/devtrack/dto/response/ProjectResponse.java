@@ -15,13 +15,8 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class ProjectResponse {
-
     private Long id;
-
     private String title;
-
     private String description;
-
     private ProjectStatus status;
-
 }
