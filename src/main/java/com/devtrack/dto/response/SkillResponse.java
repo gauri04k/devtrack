@@ -18,11 +18,8 @@ import lombok.Setter;
 public class SkillResponse {
 
     private Long id;
-
     private String name;
-
     private SkillStatus status;
-
     private LocalDate targetDate;
 
 }
