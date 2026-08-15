@@ -28,8 +28,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String path = request.getServletPath();
 
-        return path.equals("/api/auth/register")
-                || path.equals("/api/auth/login");
+        return path.equals("/api/auth/register") || path.equals("/api/auth/login");
     }
 
     @Override
@@ -56,17 +55,13 @@ public class JwtFilter extends OncePerRequestFilter {
          * Check Authorization header
          */
         if (authorizationHeader == null) {
-
             System.out.println("Authorization header: NOT FOUND");
-
         } else {
 
             System.out.println("Authorization header: FOUND");
-
             if (authorizationHeader.startsWith("Bearer ")) {
-
                 token = authorizationHeader.substring(7);
-
+                
                 System.out.println("Bearer token: FOUND");
 
                 try {
@@ -77,24 +72,15 @@ public class JwtFilter extends OncePerRequestFilter {
                      */
                     username = jwtUtil.extractUsername(token);
 
-                    System.out.println(
-                            "JWT username/email: " + username
-                    );
+                    System.out.println("JWT username/email: " + username);
 
                 } catch (Exception e) {
-
-                    System.out.println(
-                            "ERROR: Could not extract username from JWT"
-                    );
-
-                    e.printStackTrace();
+                    System.out.println("ERROR: Could not extract username from JWT");
+                                     e.printStackTrace();
                 }
 
             } else {
-
-                System.out.println(
-                        "ERROR: Authorization header does not start with Bearer"
-                );
+                System.out.println("ERROR: Authorization header does not start with Bearer");
             }
         }
 
@@ -113,40 +99,27 @@ public class JwtFilter extends OncePerRequestFilter {
                  * STEP 4:
                  * Load user from database
                  */
-                UserDetails userDetails =
-                        userDetailsService
-                                .loadUserByUsername(username);
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-                System.out.println(
-                        "User found in database: "
-                                + userDetails.getUsername()
-                );
+                System.out.println("User found in database: "+ userDetails.getUsername());
 
-                System.out.println(
-                        "User authorities: "
-                                + userDetails.getAuthorities()
-                );
+                System.out.println("User authorities: "+ userDetails.getAuthorities());
 
                 /*
                  * STEP 5:
                  * Validate JWT
                  */
-                boolean validToken =
-                        jwtUtil.validateToken(token);
+                boolean validToken = jwtUtil.validateToken(token);
 
-                System.out.println(
-                        "JWT validation result: "
-                                + validToken
-                );
+                System.out.println("JWT validation result: "+ validToken);
 
                 if (validToken) {
-
+                	
                     /*
                      * STEP 6:
                      * Create Spring Security authentication
                      */
-                    UsernamePasswordAuthenticationToken authentication =
-                            new UsernamePasswordAuthenticationToken(
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
                                     userDetails.getAuthorities()
@@ -156,10 +129,7 @@ public class JwtFilter extends OncePerRequestFilter {
                      * STEP 7:
                      * Add request details
                      */
-                    authentication.setDetails(
-                            new WebAuthenticationDetailsSource()
-                                    .buildDetails(request)
-                    );
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                     /*
                      * STEP 8:
@@ -169,37 +139,22 @@ public class JwtFilter extends OncePerRequestFilter {
                             .getContext()
                             .setAuthentication(authentication);
 
-                    System.out.println(
-                            "AUTHENTICATION SUCCESSFULLY SET"
-                    );
-
+                    System.out.println("AUTHENTICATION SUCCESSFULLY SET");
                 } else {
 
-                    System.out.println(
-                            "JWT INVALID - Authentication NOT set"
-                    );
+                    System.out.println("JWT INVALID - Authentication NOT set");
                 }
 
             } catch (Exception e) {
-
-                System.out.println(
-                        "ERROR while authenticating JWT"
-                );
-
+                System.out.println("ERROR while authenticating JWT");
                 e.printStackTrace();
             }
 
         } else if (username == null) {
-
-            System.out.println(
-                    "Username is NULL - Authentication NOT set"
-            );
+            System.out.println("Username is NULL - Authentication NOT set");
 
         } else {
-
-            System.out.println(
-                    "Authentication already exists"
-            );
+            System.out.println("Authentication already exists");
         }
 
         /*
@@ -208,9 +163,7 @@ public class JwtFilter extends OncePerRequestFilter {
          */
         filterChain.doFilter(request, response);
 
-        System.out.println(
-                "JWT FILTER COMPLETED"
-        );
+        System.out.println("JWT FILTER COMPLETED");
         System.out.println("----------------------------------------");
     }
 }

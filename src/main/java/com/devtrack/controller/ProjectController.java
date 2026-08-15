@@ -37,6 +37,7 @@ public class ProjectController {
         @ApiResponse(responseCode = "200", description = "Project created successfully", content = @Content(schema = @Schema(implementation = ProjectResponse.class))),
         @ApiResponse(responseCode = "400", description = "Invalid request payload")
     })
+    
     @PostMapping
     public ProjectResponse createProject(@Parameter(description = "User identifier") @PathVariable Long userId,
                                          @Parameter(description = "Project creation payload") @Valid @RequestBody ProjectRequest request) {

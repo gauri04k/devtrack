@@ -37,9 +37,7 @@ public class NoteController {
 
         NoteResponse response = noteService.createNote(userId, request);
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping
@@ -50,8 +48,7 @@ public class NoteController {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<NoteResponse> response =
-                noteService.getAllNotes(userId, pageable);
+        Page<NoteResponse> response = noteService.getAllNotes(userId, pageable);
 
         return ResponseEntity.ok(response);
     }
@@ -61,8 +58,7 @@ public class NoteController {
             @PathVariable Long userId,
             @PathVariable Long noteId) {
 
-        NoteResponse response =
-                noteService.getNoteById(userId, noteId);
+        NoteResponse response = noteService.getNoteById(userId, noteId);
 
         return ResponseEntity.ok(response);
     }
@@ -73,16 +69,13 @@ public class NoteController {
             @PathVariable Long noteId,
             @Valid @RequestBody NoteRequest request) {
 
-        NoteResponse response =
-                noteService.updateNote(userId, noteId, request);
+        NoteResponse response = noteService.updateNote(userId, noteId, request);
 
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{noteId}")
-    public ResponseEntity<Void> deleteNote(
-            @PathVariable Long userId,
-            @PathVariable Long noteId) {
+    public ResponseEntity<Void> deleteNote( @PathVariable Long userId, @PathVariable Long noteId) {
 
         noteService.deleteNote(userId, noteId);
         
@@ -97,9 +90,7 @@ public class NoteController {
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size);
-
-        Page<NoteResponse> response =
-                noteService.searchNotes(userId, keyword, pageable);
+        Page<NoteResponse> response = noteService.searchNotes(userId, keyword, pageable);
 
         return ResponseEntity.ok(response);
     }

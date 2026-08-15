@@ -3,7 +3,6 @@ package com.devtrack.entity;
 import java.time.LocalDate;
 
 import com.devtrack.enums.MilestoneStatus;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -19,9 +18,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-
-
 
 @Entity
 @Table(name = "milestones")

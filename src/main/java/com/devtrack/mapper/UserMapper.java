@@ -7,6 +7,7 @@ import com.devtrack.entity.User;
 public class UserMapper {
 
     private UserMapper() {
+    	
     }
 
     /**

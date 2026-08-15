@@ -12,8 +12,6 @@ import lombok.Setter;
 @Getter
 @Setter
 public class DailyLogRequest {
-
-    // Optional because a log may or may not be linked to a skill
     private Long skillId;
 
     @NotBlank(message = "Topic is required")
