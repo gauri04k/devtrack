@@ -34,7 +34,6 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(
             AuthenticationConfiguration configuration) throws Exception {
-
         return configuration.getAuthenticationManager();
     }
 
@@ -47,49 +46,35 @@ public class SecurityConfig {
                     corsConfigurationSource()
             ))
             .csrf(csrf -> csrf.disable())
-            .sessionManagement(session ->
-                    session.sessionCreationPolicy(
+            .sessionManagement(session -> session.sessionCreationPolicy(
                             SessionCreationPolicy.STATELESS
                     )
             )
-            .authorizeHttpRequests(auth -> auth
-                    .requestMatchers(
+            .authorizeHttpRequests(auth -> auth.requestMatchers(
                             "/api/auth/register",
-                            "/api/auth/login"
-                    ).permitAll()
+                            "/api/auth/login").permitAll()
                     .requestMatchers(
                             "/swagger-ui/**",
                             "/swagger-ui.html",
-                            "/v3/api-docs/**"
-                    ).permitAll()
-
-                    .requestMatchers(
-                            HttpMethod.OPTIONS,
-                            "/**"
-                    ).permitAll()
-                    .anyRequest().authenticated()
+                            "/v3/api-docs/**",
+                            "/v3/api-docs"
+                    ).permitAll().requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                     .anyRequest().authenticated()
             )
-          //JWT FILTER
-            .addFilterBefore(
-                    jwtFilter,
-                    UsernamePasswordAuthenticationFilter.class
-            );
 
+            .addFilterBefore(jwtFilter,UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // React Vite frontend
-        configuration.setAllowedOrigins(
-                List.of("http://localhost:5173"));
+        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
 
-        // HTTP methods
         configuration.setAllowedMethods(
-                List.of(
-                        "GET",
+                List.of("GET",
                         "POST",
                         "PUT",
                         "PATCH",
@@ -98,14 +83,8 @@ public class SecurityConfig {
                 )
         );
 
-        // Headers
-        configuration.setAllowedHeaders(
-                List.of(
-                        "Authorization",
-                        "Content-Type",
-                        "Accept"
-                )
-        );
+        configuration.setAllowedHeaders(List.of("Authorization","Content-Type","Accept"));
+
         // Credentials
         configuration.setAllowCredentials(true);
 
