@@ -73,8 +73,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse getUserById(Long id) {
 
-        User user = userRepository.findById(id)
-                .orElseThrow(() ->
+        User user = userRepository.findById(id).orElseThrow(() ->
                         new ResourceNotFoundException("User not found with id : " + id));
 
         UserResponse response = new UserResponse();
@@ -90,8 +89,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse updateUser(Long id, UserRequest request) {
 
-        User user = userRepository.findById(id)
-                .orElseThrow(() ->
+        User user = userRepository.findById(id).orElseThrow(() ->
                         new ResourceNotFoundException("User not found with id : " + id));
 
         if (!user.getEmail().equals(request.getEmail())
@@ -119,8 +117,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteUser(Long id) {
 
-        User user = userRepository.findById(id)
-                .orElseThrow(() ->
+        User user = userRepository.findById(id).orElseThrow(() ->
                         new ResourceNotFoundException("User not found with id : " + id));
 
         userRepository.delete(user);

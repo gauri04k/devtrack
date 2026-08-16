@@ -7,9 +7,6 @@ import com.devtrack.entity.Skill;
 public class SkillMapper {
     private SkillMapper() {
     }
-    /**
-     * Convert SkillRequest DTO to Skill Entity
-     */
     public static Skill toEntity(SkillRequest request) {
 
         if (request == null) {

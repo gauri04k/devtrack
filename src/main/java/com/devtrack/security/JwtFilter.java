@@ -27,143 +27,146 @@ public class JwtFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
 
         String path = request.getServletPath();
+        // 1. AUTHENTICATION ENDPOINTS
+     
+        if (path.equals("/api/auth/register") || path.equals("/api/auth/login")) {
+            return true;
+        }
 
-        return path.equals("/api/auth/register") || path.equals("/api/auth/login");
+        // 2. SWAGGER UI
+
+        if (path.equals("/swagger-ui.html") || path.startsWith("/swagger-ui/")) {
+            return true;
+        }
+
+        // 3. OPENAPI DOCUMENTATION
+
+        if (path.equals("/v3/api-docs") || path.startsWith("/v3/api-docs/")) {
+            return true;
+        }
+        
+        // 4. CORS PREFLIGHT REQUEST
+
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
+        }
+        return false;
     }
-
+    // JWT FILTER
+   
     @Override
-    protected void doFilterInternal(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,FilterChain filterChain)throws ServletException, IOException {
 
         String requestPath = request.getServletPath();
 
-        System.out.println("----------------------------------------");
+        System.out.println();
+        System.out.println("========================================");
         System.out.println("JWT FILTER");
-        System.out.println("Request: " + request.getMethod() + " " + requestPath);
+        System.out.println("Request : "+ request.getMethod() + " " + requestPath);
 
-        String authorizationHeader =
-                request.getHeader("Authorization");
+        // GET AUTHORIZATION HEADER
+      
+        String authorizationHeader = request.getHeader("Authorization");
 
         String username = null;
         String token = null;
 
-        /*
-         * STEP 1:
-         * Check Authorization header
-         */
-        if (authorizationHeader == null) {
+        // STEP 1: CHECK AUTHORIZATION HEADER
+      
+        if (authorizationHeader == null || authorizationHeader.isBlank()) {
             System.out.println("Authorization header: NOT FOUND");
         } else {
 
             System.out.println("Authorization header: FOUND");
+            
+            // STEP 2: CHECK BEARER TOKEN
+        
             if (authorizationHeader.startsWith("Bearer ")) {
-                token = authorizationHeader.substring(7);
-                
-                System.out.println("Bearer token: FOUND");
+                token = authorizationHeader.substring(7).trim();
 
-                try {
+                if (token.isBlank()) {
+                    System.out.println("Bearer token: EMPTY");
+                } else {
 
-                    /*
-                     * STEP 2:
-                     * Extract email/username from JWT
-                     */
-                    username = jwtUtil.extractUsername(token);
+                    System.out.println("Bearer token: FOUND");
 
-                    System.out.println("JWT username/email: " + username);
+                    // STEP 3: EXTRACT USERNAME / EMAIL FROM JWT
+                    try {
+                        username =jwtUtil.extractUsername(token);
 
-                } catch (Exception e) {
-                    System.out.println("ERROR: Could not extract username from JWT");
-                                     e.printStackTrace();
+                        System.out.println("JWT username/email: "+ username);
+                    } catch (Exception e) {
+
+                        System.out.println("ERROR: Could not extract username from JWT");
+
+                        System.out.println("JWT will NOT be authenticated.");
+                    }
                 }
 
             } else {
                 System.out.println("ERROR: Authorization header does not start with Bearer");
             }
         }
-
-        /*
-         * STEP 3:
-         * If username exists and user is not already authenticated
-         */
-        if (username != null
-                && SecurityContextHolder
-                        .getContext()
-                        .getAuthentication() == null) {
-
+        // STEP 4: CHECK USERNAME
+        if (username != null && !username.isBlank() && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
-
-                /*
-                 * STEP 4:
-                 * Load user from database
-                 */
+                // STEP 5: LOAD USER FROM DATABASE
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 System.out.println("User found in database: "+ userDetails.getUsername());
 
                 System.out.println("User authorities: "+ userDetails.getAuthorities());
-
-                /*
-                 * STEP 5:
-                 * Validate JWT
-                 */
+                // STEP 6: VALIDATE JWT
+              
                 boolean validToken = jwtUtil.validateToken(token);
 
                 System.out.println("JWT validation result: "+ validToken);
 
+                // STEP 7: CREATE AUTHENTICATION
+               
                 if (validToken) {
-                	
-                    /*
-                     * STEP 6:
-                     * Create Spring Security authentication
-                     */
+
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                                     userDetails,
                                     null,
                                     userDetails.getAuthorities()
                             );
 
-                    /*
-                     * STEP 7:
-                     * Add request details
-                     */
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
-                    /*
-                     * STEP 8:
-                     * Put authentication into SecurityContext
-                     */
-                    SecurityContextHolder
-                            .getContext()
-                            .setAuthentication(authentication);
+                    // STEP 8: ADD REQUEST DETAILS
+                    authentication.setDetails(new WebAuthenticationDetailsSource()
+                                    .buildDetails(request)
+                    );
+                    // STEP 9: SET SECURITY CONTEXT
+                
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
 
                     System.out.println("AUTHENTICATION SUCCESSFULLY SET");
+
                 } else {
 
                     System.out.println("JWT INVALID - Authentication NOT set");
                 }
 
             } catch (Exception e) {
+
                 System.out.println("ERROR while authenticating JWT");
-                e.printStackTrace();
+
+                System.out.println("Authentication NOT set.");
             }
 
-        } else if (username == null) {
-            System.out.println("Username is NULL - Authentication NOT set");
+        } else if (username == null || username.isBlank()) {
+
+            System.out.println("Username is NULL/EMPTY - Authentication NOT set");
 
         } else {
             System.out.println("Authentication already exists");
         }
+        // STEP 10: CONTINUE REQUEST
 
-        /*
-         * STEP 9:
-         * Continue request
-         */
-        filterChain.doFilter(request, response);
+        filterChain.doFilter(request,response);
 
         System.out.println("JWT FILTER COMPLETED");
-        System.out.println("----------------------------------------");
+        System.out.println("========================================");
+        System.out.println();
     }
 }

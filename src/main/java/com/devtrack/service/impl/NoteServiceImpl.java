@@ -27,16 +27,11 @@ public class NoteServiceImpl implements NoteService {
     private final UserRepository userRepository;
 
     @Override
-    public NoteResponse createNote(
-            Long userId,
-            NoteRequest request) {
+    public NoteResponse createNote(Long userId,NoteRequest request) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
+        User user = userRepository.findById(userId).orElseThrow(() ->new ResourceNotFoundException(
                                 "User not found with id : " + userId
-                        )
-                );
+                        ));
 
         Note note = new Note();
 
@@ -52,55 +47,31 @@ public class NoteServiceImpl implements NoteService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<NoteResponse> getAllNotes(
-            Long userId,
-            Pageable pageable) {
+    public Page<NoteResponse> getAllNotes(Long userId,Pageable pageable) {
 
-        userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
+        userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException(
                                 "User not found with id : " + userId
-                        )
-                );
+                        ));
 
-        return noteRepository
-                .findByUserIdOrderByCreatedAtDesc(
-                        userId,
-                        pageable
-                )
-                .map(this::mapToResponse);
+        return noteRepository.findByUserIdOrderByCreatedAtDesc(userId,pageable).map(this::mapToResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public NoteResponse getNoteById(
-            Long userId,
-            Long noteId) {
+    public NoteResponse getNoteById(Long userId,Long noteId) {
 
-        Note note = noteRepository
-                .findByIdAndUserId(noteId, userId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
+        Note note = noteRepository.findByIdAndUserId(noteId, userId).orElseThrow(() -> new ResourceNotFoundException(
                                 "Note not found with id : " + noteId
-                        )
-                );
+                        ));
 
         return mapToResponse(note);
     }
 
     @Override
-    public NoteResponse updateNote(
-            Long userId,
-            Long noteId,
-            NoteRequest request) {
+    public NoteResponse updateNote(Long userId,Long noteId,NoteRequest request) {
 
-        Note note = noteRepository
-                .findByIdAndUserId(noteId, userId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Note not found with id : " + noteId
-                        )
-                );
+        Note note = noteRepository.findByIdAndUserId(noteId, userId).orElseThrow(() ->
+                        new ResourceNotFoundException("Note not found with id : " + noteId));
 
         note.setTitle(request.getTitle());
         note.setContent(request.getContent());
@@ -110,53 +81,28 @@ public class NoteServiceImpl implements NoteService {
         return mapToResponse(updatedNote);
     }
 
-
-    // ==========================================
-    // DELETE NOTE
-    // ==========================================
-
     @Override
-    public void deleteNote(
-            Long userId,
-            Long noteId) {
+    public void deleteNote(Long userId,Long noteId) {
 
-        Note note = noteRepository
-                .findByIdAndUserId(noteId, userId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
+        Note note = noteRepository.findByIdAndUserId(noteId, userId).orElseThrow(() -> new ResourceNotFoundException(
                                 "Note not found with id : " + noteId
-                        )
-                );
+                        ));
 
         noteRepository.delete(note);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Page<NoteResponse> searchNotes(
-            Long userId,
-            String keyword,
-            Pageable pageable) {
+    public Page<NoteResponse> searchNotes(Long userId,String keyword,Pageable pageable) {
 
-        // Verify user exists
-        userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
+        userRepository.findById(userId).orElseThrow(() ->new ResourceNotFoundException(
                                 "User not found with id : " + userId
-                        )
-                );
+                        ));
 
-        return noteRepository
-                .searchNotes(
-                        userId,
-                        keyword,
-                        pageable
-                )
-                .map(this::mapToResponse);
+        return noteRepository.searchNotes(userId,keyword,pageable).map(this::mapToResponse);
     }
 
     private NoteResponse mapToResponse(Note note) {
-
         return NoteResponse.builder()
                 .id(note.getId())
                 .userId(note.getUser().getId())

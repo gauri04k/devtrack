@@ -24,18 +24,15 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
 
-    public ProjectServiceImpl(ProjectRepository projectRepository,
-                              UserRepository userRepository) {
+    public ProjectServiceImpl(ProjectRepository projectRepository,UserRepository userRepository) {
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
     }
 
     @Override
-    public ProjectResponse createProject(Long userId,
-                                         ProjectRequest request) {
+    public ProjectResponse createProject(Long userId,ProjectRequest request) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
+        User user = userRepository.findById(userId).orElseThrow(() ->
                         new ResourceNotFoundException("User not found with id : " + userId));
 
         if (projectRepository.existsByTitleIgnoreCaseAndUser(request.getTitle(), user)) {
@@ -54,8 +51,7 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public List<ProjectResponse> getAllProjects(Long userId) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
+        User user = userRepository.findById(userId).orElseThrow(() ->
                         new ResourceNotFoundException("User not found with id : " + userId));
 
         return projectRepository.findByUser(user)
@@ -65,8 +61,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    public ProjectResponse getProjectById(Long userId,
-                                          Long projectId) {
+    public ProjectResponse getProjectById(Long userId,Long projectId) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
@@ -80,16 +75,12 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    public ProjectResponse updateProject(Long userId,
-                                         Long projectId,
-                                         ProjectRequest request) {
+    public ProjectResponse updateProject(Long userId,Long projectId, ProjectRequest request) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
+        User user = userRepository.findById(userId).orElseThrow(() ->
                         new ResourceNotFoundException("User not found with id : " + userId));
 
-        Project project = projectRepository.findByIdAndUser(projectId, user)
-                .orElseThrow(() ->
+        Project project = projectRepository.findByIdAndUser(projectId, user).orElseThrow(() ->
                         new ResourceNotFoundException("Project not found with id : " + projectId));
 
         if (!project.getTitle().equalsIgnoreCase(request.getTitle())
@@ -107,26 +98,20 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    public void deleteProject(Long userId,
-                              Long projectId) {
+    public void deleteProject(Long userId,Long projectId) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
+        User user = userRepository.findById(userId).orElseThrow(() ->
                         new ResourceNotFoundException("User not found with id : " + userId));
 
-        Project project = projectRepository.findByIdAndUser(projectId, user)
-                .orElseThrow(() ->
+        Project project = projectRepository.findByIdAndUser(projectId, user).orElseThrow(() ->
                         new ResourceNotFoundException("Project not found with id : " + projectId));
 
         projectRepository.delete(project);
     }
 
     @Override
-    public List<ProjectResponse> getProjectsByStatus(Long userId,
-                                                     ProjectStatus status) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() ->
+    public List<ProjectResponse> getProjectsByStatus(Long userId, ProjectStatus status) {
+        User user = userRepository.findById(userId).orElseThrow(() ->
                         new ResourceNotFoundException("User not found with id : " + userId));
 
         return projectRepository.findByUserAndStatus(user, status)

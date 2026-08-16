@@ -33,7 +33,8 @@ public class SecurityConfig {
 
     @Bean
     public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration configuration)throws Exception {
+            AuthenticationConfiguration configuration) throws Exception {
+
         return configuration.getAuthenticationManager();
     }
 
@@ -46,45 +47,46 @@ public class SecurityConfig {
                     corsConfigurationSource()
             ))
             .csrf(csrf -> csrf.disable())
-
             .sessionManagement(session ->
                     session.sessionCreationPolicy(
                             SessionCreationPolicy.STATELESS
                     )
             )
             .authorizeHttpRequests(auth -> auth
-
-                    // Public authentication APIs
                     .requestMatchers(
                             "/api/auth/register",
                             "/api/auth/login"
                     ).permitAll()
+                    .requestMatchers(
+                            "/swagger-ui/**",
+                            "/swagger-ui.html",
+                            "/v3/api-docs/**"
+                    ).permitAll()
 
-                    // Allow browser CORS preflight
                     .requestMatchers(
                             HttpMethod.OPTIONS,
                             "/**"
                     ).permitAll()
                     .anyRequest().authenticated()
             )
-
-            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+          //JWT FILTER
+            .addFilterBefore(
+                    jwtFilter,
+                    UsernamePasswordAuthenticationFilter.class
+            );
 
         return http.build();
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-
         CorsConfiguration configuration = new CorsConfiguration();
 
         // React Vite frontend
         configuration.setAllowedOrigins(
-                List.of(
-                        "http://localhost:5173")
-        );
+                List.of("http://localhost:5173"));
 
-        // HTTP methods used by frontend
+        // HTTP methods
         configuration.setAllowedMethods(
                 List.of(
                         "GET",
@@ -96,7 +98,7 @@ public class SecurityConfig {
                 )
         );
 
-        // Headers allowed from React
+        // Headers
         configuration.setAllowedHeaders(
                 List.of(
                         "Authorization",
@@ -104,11 +106,12 @@ public class SecurityConfig {
                         "Accept"
                 )
         );
-        // Allow credentials
+        // Credentials
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**",configuration);
+
+        source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }

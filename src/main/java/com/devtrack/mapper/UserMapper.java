@@ -10,9 +10,6 @@ public class UserMapper {
     	
     }
 
-    /**
-     * Convert UserRequest DTO to User Entity
-     */
     public static User toEntity(UserRequest request) {
         if (request == null) {
             return null;
@@ -21,7 +18,6 @@ public class UserMapper {
        return User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
-                // Password should be encoded in Service Layer
                 .password(request.getPassword()).build();
     }
 

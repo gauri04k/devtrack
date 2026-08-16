@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 @Aspect
 @Component
 public class LoggingAspect {
-
     private static final Logger logger = LoggerFactory.getLogger(LoggingAspect.class);
     /**
      * Logs every method inside the service layer.
@@ -36,7 +35,6 @@ public class LoggingAspect {
         );
 
         try {
-
             Object result = joinPoint.proceed();
             long executionTime = System.currentTimeMillis() - startTime;
 
@@ -46,13 +44,10 @@ public class LoggingAspect {
                     methodName,
                     executionTime
             );
-
             return result;
 
         } catch (Throwable exception) {
-
             long executionTime = System.currentTimeMillis() - startTime;
-
             logger.error(
                     "ERROR: {}.{}() - Execution time: {} ms - Exception: {}",
                     className,

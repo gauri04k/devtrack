@@ -13,13 +13,10 @@ import com.devtrack.entity.Note;
 
 public interface NoteRepository extends JpaRepository<Note, Long>{
 
-    // get all notes of a particular user
     Page<Note> findByUserIdOrderByCreatedAtDesc(Long userId,Pageable pageable);
 
-    // get a specific note belonging to a specific user
     Optional<Note> findByIdAndUserId(Long id,Long userId);
 
-    // search note by content or title
     @Query("""
             SELECT n
             FROM Note n
