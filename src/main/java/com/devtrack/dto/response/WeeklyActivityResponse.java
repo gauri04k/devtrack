@@ -14,14 +14,8 @@ import lombok.Setter;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DailyLogResponse {
+public class WeeklyActivityResponse {
 
-    private Long id;
-    private Long userId;
-    private Long skillId;
-    private String skillName;
-    private String topic;
+    private LocalDate date;
     private BigDecimal hours;
-    private String notes;
-    private LocalDate logDate;
 }

@@ -18,7 +18,6 @@ public interface ProjectService {
 
     void deleteProject(Long userId, Long projectId);
 
-    List<ProjectResponse> getProjectsByStatus(Long userId,
-                                              ProjectStatus status);
+    List<ProjectResponse> getProjectsByStatus(Long userId,ProjectStatus status);
 
 }

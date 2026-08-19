@@ -34,7 +34,7 @@ import lombok.Setter;
 @Table(name= "projects")
 public class Project {
 	
-	 @Id
+	    @Id
 	    @GeneratedValue(strategy = GenerationType.IDENTITY)
 	    private Long id;
 

@@ -15,6 +15,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,7 +24,12 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "skills")
+@Table(
+    name = "skills",
+    uniqueConstraints = {
+        @UniqueConstraint(name = "uk_skill_user_name",columnNames = {"user_id", "name"})
+    }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -34,18 +41,17 @@ public class Skill {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name", nullable = false, length = 100)
+    @Column(name = "name",nullable = false,length = 100)
     private String name;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column(name = "status",nullable = false)
     private SkillStatus status;
 
     @Column(name = "target_date")
     private LocalDate targetDate;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id",nullable = false)
     private User user;
-
 }

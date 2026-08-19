@@ -15,22 +15,20 @@ import com.devtrack.enums.SkillStatus;
 @Repository
 public interface SkillRepository extends JpaRepository<Skill, Long> {
 
-          List<Skill> findByUser(User user);
-          List<Skill> findByUserAndStatus(User user, SkillStatus status);
+    List<Skill> findByUserOrderByIdDesc(User user);
 
-          Optional<Skill> findByIdAndUser(Long id, User user);
+    List<Skill> findByUserAndStatusOrderByIdDesc(User user,SkillStatus status);
 
-           boolean existsByIdAndUser(Long id, User user);
-           boolean existsByNameIgnoreCaseAndUser(String name, User user);
-
-            @Query("""
-              SELECT COUNT(s)
-              FROM Skill s
-              WHERE s.user.id = :userId
-              AND s.status = :status
-            """)
+    Optional<Skill> findByIdAndUser(Long id,User user);
     
-            long countByUserIdAndStatus(
-                    @Param("userId") Long userId,
-                    @Param("status") SkillStatus status);
+    boolean existsByNameIgnoreCaseAndUser(String name, User user);
+
+    @Query("""
+        SELECT COUNT(s)
+        FROM Skill s
+        WHERE s.user.id = :userId
+        AND s.status = :status
+    """)
+    long countByUserIdAndStatus(@Param("userId") Long userId,@Param("status") SkillStatus status
+    );
 }

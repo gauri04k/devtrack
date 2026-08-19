@@ -11,15 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class LoggingAspect {
     private static final Logger logger = LoggerFactory.getLogger(LoggingAspect.class);
-    /**
-     * Logs every method inside the service layer.
-     *
-     * Logs:
-     * 1. Service class and method name
-     * 2. Execution time
-     * 3. Successful completion
-     * 4. Exceptions
-     */
+
     @Around("execution(* com.devtrack.service..*(..))")
     public Object logServiceMethod(ProceedingJoinPoint joinPoint)throws Throwable {
 

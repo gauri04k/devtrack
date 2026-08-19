@@ -31,48 +31,45 @@ import jakarta.validation.Valid;
 @RestController
 @RequestMapping("/api/users/{userId}/skills")
 @Validated
-@Tag(
-    name = "Skills",
-    description = "Skill tracking endpoints"
-)
+@Tag(name = "Skills",description = "Skill tracking endpoints")
 public class SkillController {
 
     private final SkillService skillService;
 
-    public SkillController(
-            SkillService skillService
-    ) {
+    public SkillController(SkillService skillService) {
         this.skillService = skillService;
     }
 
     @Operation(
-        summary = "Create a skill",
-        description = "Adds a new skill for a user"
+            summary = "Create a skill",
+            description = "Adds a new skill for a user"
     )
     @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "Skill created successfully",
-            content = @Content(
-                schema = @Schema(
-                    implementation = SkillResponse.class
-                )
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Skill created successfully",
+                    content = @Content(
+                            schema = @Schema(
+                                    implementation = SkillResponse.class
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request payload"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "User not found"
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Skill already exists"
             )
-        ),
-        @ApiResponse(
-            responseCode = "400",
-            description = "Invalid request payload"
-        ),
-        @ApiResponse(
-            responseCode = "404",
-            description = "User not found"
-        )
     })
     @PostMapping
     public SkillResponse createSkill(
-            @Parameter(
-                description = "User identifier"
-            )
+            @Parameter(description = "User identifier")
             @PathVariable Long userId,
 
             @Valid
@@ -80,63 +77,43 @@ public class SkillController {
             SkillRequest request
     ) {
 
-        return skillService.createSkill(
-                userId,
-                request
-        );
+        return skillService.createSkill(userId,request);
     }
 
-    // =========================================================
-    // GET ALL
-    // =========================================================
-
     @Operation(
-        summary = "Get all skills",
-        description = "Returns all skills for a user"
+            summary = "Get all skills",
+            description = "Returns all skills for a user"
     )
     @ApiResponse(
-        responseCode = "200",
-        description = "Skills retrieved successfully",
-        content = @Content(
-            array = @ArraySchema(
-                schema = @Schema(
-                    implementation = SkillResponse.class
-                )
+            responseCode = "200",
+            description = "Skills retrieved successfully",
+            content = @Content(
+                    array = @ArraySchema(
+                            schema = @Schema(
+                                    implementation = SkillResponse.class
+                            )
+                    )
             )
-        )
     )
     @GetMapping
     public List<SkillResponse> getAllSkills(
-            @Parameter(
-                description = "User identifier"
-            )
             @PathVariable Long userId
     ) {
 
         return skillService.getAllSkills(userId);
     }
 
-    // =========================================================
-    // GET BY ID
-    // =========================================================
 
-    @Operation(
-        summary = "Get skill by ID"
-    )
+    @Operation(summary = "Get skill by ID")
     @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "Skill retrieved successfully",
-            content = @Content(
-                schema = @Schema(
-                    implementation = SkillResponse.class
-                )
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Skill retrieved successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Skill not found"
             )
-        ),
-        @ApiResponse(
-            responseCode = "404",
-            description = "Skill not found"
-        )
     })
     @GetMapping("/{skillId}")
     public SkillResponse getSkillById(
@@ -149,33 +126,27 @@ public class SkillController {
                 skillId
         );
     }
-
-    // =========================================================
-    // UPDATE
-    // =========================================================
-
     @Operation(
-        summary = "Update a skill",
-        description = "Updates an existing skill"
+            summary = "Update a skill",
+            description = "Updates an existing skill"
     )
     @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "Skill updated successfully",
-            content = @Content(
-                schema = @Schema(
-                    implementation = SkillResponse.class
-                )
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Skill updated successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request payload"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Skill not found"
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Duplicate skill"
             )
-        ),
-        @ApiResponse(
-            responseCode = "400",
-            description = "Invalid request payload"
-        ),
-        @ApiResponse(
-            responseCode = "404",
-            description = "Skill not found"
-        )
     })
     @PutMapping("/{skillId}")
     public SkillResponse updateSkill(
@@ -187,71 +158,47 @@ public class SkillController {
             SkillRequest request
     ) {
 
-        return skillService.updateSkill(
-                userId,
-                skillId,
-                request
+        return skillService.updateSkill(userId,skillId,request
         );
     }
 
-    // =========================================================
-    // DELETE
-    // =========================================================
-
     @Operation(
-        summary = "Delete a skill"
+            summary = "Delete a skill"
     )
     @ApiResponses({
-        @ApiResponse(
-            responseCode = "200",
-            description = "Skill deleted successfully"
-        ),
-        @ApiResponse(
-            responseCode = "404",
-            description = "Skill not found"
-        )
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Skill deleted successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Skill not found"
+            )
     })
     @DeleteMapping("/{skillId}")
-    public String deleteSkill(
-            @PathVariable Long userId,
-            @PathVariable Long skillId
-    ) {
+    public String deleteSkill(@PathVariable Long userId,@PathVariable Long skillId) {
 
-        skillService.deleteSkill(
-                userId,
-                skillId
+        skillService.deleteSkill(userId, skillId
         );
 
         return "Skill deleted successfully";
     }
 
-    // =========================================================
-    // FILTER BY STATUS
-    // =========================================================
-
-    @Operation(
-        summary = "Filter skills by status"
-    )
+    @Operation(summary = "Filter skills by status")
     @ApiResponse(
-        responseCode = "200",
-        description = "Skills retrieved successfully",
-        content = @Content(
-            array = @ArraySchema(
-                schema = @Schema(
-                    implementation = SkillResponse.class
-                )
+            responseCode = "200",
+            description = "Skills retrieved successfully",
+            content = @Content(
+                    array = @ArraySchema(
+                            schema = @Schema(
+                                    implementation = SkillResponse.class
+                            )
+                    )
             )
-        )
     )
     @GetMapping("/status/{status}")
-    public List<SkillResponse> getSkillsByStatus(
-            @PathVariable Long userId,
-            @PathVariable SkillStatus status
-    ) {
+    public List<SkillResponse> getSkillsByStatus(@PathVariable Long userId,@PathVariable SkillStatus status) {
 
-        return skillService.getSkillsByStatus(
-                userId,
-                status
-        );
+        return skillService.getSkillsByStatus(userId,status);
     }
 }

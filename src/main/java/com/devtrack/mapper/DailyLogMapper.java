@@ -8,14 +8,14 @@ import com.devtrack.entity.DailyLog;
 
 @Component
 public class DailyLogMapper {
-
-    // Convert Entity -> Response DTO
     public DailyLogResponse toResponse(DailyLog dailyLog) {
-
+    	
         return DailyLogResponse.builder()
+
                 .id(dailyLog.getId())
-                .userId(dailyLog.getUser().getId())
+                .userId(dailyLog.getUser() != null ? dailyLog.getUser().getId(): null)
                 .skillId(dailyLog.getSkill() != null ? dailyLog.getSkill().getId() : null)
+                .skillName(dailyLog.getSkill() != null ? dailyLog.getSkill().getName() : null)
                 .topic(dailyLog.getTopic())
                 .hours(dailyLog.getHours())
                 .notes(dailyLog.getNotes())
@@ -23,7 +23,7 @@ public class DailyLogMapper {
                 .build();
     }
 
-    // Convert Request DTO -> Entity
+
     public DailyLog toEntity(DailyLogRequest request) {
         return DailyLog.builder()
                 .topic(request.getTopic())

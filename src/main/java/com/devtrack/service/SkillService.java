@@ -8,16 +8,15 @@ import com.devtrack.enums.SkillStatus;
 
 public interface SkillService {
 
-    SkillResponse createSkill(Long userId, SkillRequest request);
+    SkillResponse createSkill(Long userId,SkillRequest request);
 
     List<SkillResponse> getAllSkills(Long userId);
 
-    SkillResponse getSkillById(Long userId, Long skillId);
+    SkillResponse getSkillById(Long userId,Long skillId);
 
-    SkillResponse updateSkill(Long userId, Long skillId, SkillRequest request);
+    SkillResponse updateSkill(Long userId,Long skillId,SkillRequest request);
 
-    void deleteSkill(Long userId, Long skillId);
+    void deleteSkill(Long userId,Long skillId);
 
-    List<SkillResponse> getSkillsByStatus(Long userId, SkillStatus status);
-
+    List<SkillResponse> getSkillsByStatus(Long userId,SkillStatus status);
 }

@@ -40,6 +40,21 @@ public class NoteController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<Page<NoteResponse>> searchNotes(
+            @PathVariable Long userId,
+            @RequestParam String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<NoteResponse> response = noteService.searchNotes(userId,keyword,pageable);
+
+        return ResponseEntity.ok(response);
+    }
+
+
     @GetMapping
     public ResponseEntity<Page<NoteResponse>> getAllNotes(
             @PathVariable Long userId,
@@ -48,17 +63,15 @@ public class NoteController {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<NoteResponse> response = noteService.getAllNotes(userId, pageable);
+        Page<NoteResponse> response = noteService.getAllNotes(userId,pageable);
 
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{noteId}")
-    public ResponseEntity<NoteResponse> getNoteById(
-            @PathVariable Long userId,
-            @PathVariable Long noteId) {
+    public ResponseEntity<NoteResponse> getNoteById(@PathVariable Long userId,@PathVariable Long noteId) {
 
-        NoteResponse response = noteService.getNoteById(userId, noteId);
+        NoteResponse response = noteService.getNoteById(userId,noteId);
 
         return ResponseEntity.ok(response);
     }
@@ -69,29 +82,16 @@ public class NoteController {
             @PathVariable Long noteId,
             @Valid @RequestBody NoteRequest request) {
 
-        NoteResponse response = noteService.updateNote(userId, noteId, request);
+        NoteResponse response = noteService.updateNote(userId,noteId,request);
 
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{noteId}")
-    public ResponseEntity<Void> deleteNote( @PathVariable Long userId, @PathVariable Long noteId) {
+    public ResponseEntity<Void> deleteNote(@PathVariable Long userId,@PathVariable Long noteId) {
 
-        noteService.deleteNote(userId, noteId);
-        
+        noteService.deleteNote(userId,noteId);
+
         return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<Page<NoteResponse>> searchNotes(
-            @PathVariable Long userId,
-            @RequestParam String keyword,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-
-        Pageable pageable = PageRequest.of(page, size);
-        Page<NoteResponse> response = noteService.searchNotes(userId, keyword, pageable);
-
-        return ResponseEntity.ok(response);
     }
 }

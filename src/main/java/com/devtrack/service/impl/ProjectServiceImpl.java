@@ -11,6 +11,7 @@ import com.devtrack.dto.response.ProjectResponse;
 import com.devtrack.entity.Project;
 import com.devtrack.entity.User;
 import com.devtrack.enums.ProjectStatus;
+import com.devtrack.exception.DuplicateProjectException;
 import com.devtrack.exception.ResourceNotFoundException;
 import com.devtrack.mapper.ProjectMapper;
 import com.devtrack.repository.ProjectRepository;
@@ -24,100 +25,176 @@ public class ProjectServiceImpl implements ProjectService {
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
 
-    public ProjectServiceImpl(ProjectRepository projectRepository,UserRepository userRepository) {
+    public ProjectServiceImpl(
+            ProjectRepository projectRepository,
+            UserRepository userRepository) {
+
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
     }
 
     @Override
-    public ProjectResponse createProject(Long userId,ProjectRequest request) {
+    public ProjectResponse createProject(
+            Long userId,
+            ProjectRequest request) {
 
-        User user = userRepository.findById(userId).orElseThrow(() ->
-                        new ResourceNotFoundException("User not found with id : " + userId));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found with id : " + userId));
 
-        if (projectRepository.existsByTitleIgnoreCaseAndUser(request.getTitle(), user)) {
-            throw new RuntimeException("Project already exists");
+        if (projectRepository.existsByTitleIgnoreCaseAndUser(
+                request.getTitle(), user)) {
+
+            throw new DuplicateProjectException(
+                    "Project '" + request.getTitle()
+                    + "' already exists for this user."
+            );
         }
 
         Project project = ProjectMapper.toEntity(request);
 
         project.setUser(user);
 
-        Project savedProject = projectRepository.save(project);
+        Project savedProject =
+                projectRepository.save(project);
 
         return ProjectMapper.toResponse(savedProject);
     }
 
     @Override
-    public List<ProjectResponse> getAllProjects(Long userId) {
+    public List<ProjectResponse> getAllProjects(
+            Long userId) {
 
-        User user = userRepository.findById(userId).orElseThrow(() ->
-                        new ResourceNotFoundException("User not found with id : " + userId));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found with id : " + userId));
 
-        return projectRepository.findByUser(user)
+        return projectRepository
+                .findByUser(user)
                 .stream()
                 .map(ProjectMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public ProjectResponse getProjectById(Long userId,Long projectId) {
+    public ProjectResponse getProjectById(
+            Long userId,
+            Long projectId) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() ->
-                        new ResourceNotFoundException("User not found with id : " + userId));
+                        new ResourceNotFoundException(
+                                "User not found with id : " + userId));
 
-        Project project = projectRepository.findByIdAndUser(projectId, user)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException("Project not found with id : " + projectId));
+        Project project =
+                projectRepository
+                        .findByIdAndUser(
+                                projectId,
+                                user)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Project not found with id : "
+                                                + projectId));
 
         return ProjectMapper.toResponse(project);
     }
 
     @Override
-    public ProjectResponse updateProject(Long userId,Long projectId, ProjectRequest request) {
+    public ProjectResponse updateProject(
+            Long userId,
+            Long projectId,
+            ProjectRequest request) {
 
-        User user = userRepository.findById(userId).orElseThrow(() ->
-                        new ResourceNotFoundException("User not found with id : " + userId));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found with id : " + userId));
 
-        Project project = projectRepository.findByIdAndUser(projectId, user).orElseThrow(() ->
-                        new ResourceNotFoundException("Project not found with id : " + projectId));
+        Project project =
+                projectRepository
+                        .findByIdAndUser(
+                                projectId,
+                                user)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Project not found with id : "
+                                                + projectId));
 
-        if (!project.getTitle().equalsIgnoreCase(request.getTitle())
-                && projectRepository.existsByTitleIgnoreCaseAndUser(request.getTitle(), user)) {
-            throw new RuntimeException("Project already exists");
+        if (!project.getTitle()
+                .equalsIgnoreCase(request.getTitle())
+
+                && projectRepository
+                        .existsByTitleIgnoreCaseAndUser(
+                                request.getTitle(),
+                                user)) {
+
+            throw new DuplicateProjectException(
+                    "Another project named '"
+                    + request.getTitle()
+                    + "' already exists for this user."
+            );
         }
 
         project.setTitle(request.getTitle());
-        project.setDescription(request.getDescription());
-        project.setStatus(request.getStatus());
 
-        Project updatedProject = projectRepository.save(project);
+        project.setDescription(
+                request.getDescription()
+        );
 
-        return ProjectMapper.toResponse(updatedProject);
+        project.setStatus(
+                request.getStatus()
+        );
+
+        Project updatedProject =
+                projectRepository.save(project);
+
+        return ProjectMapper.toResponse(
+                updatedProject
+        );
     }
 
     @Override
-    public void deleteProject(Long userId,Long projectId) {
+    public void deleteProject(
+            Long userId,
+            Long projectId) {
 
-        User user = userRepository.findById(userId).orElseThrow(() ->
-                        new ResourceNotFoundException("User not found with id : " + userId));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found with id : " + userId));
 
-        Project project = projectRepository.findByIdAndUser(projectId, user).orElseThrow(() ->
-                        new ResourceNotFoundException("Project not found with id : " + projectId));
+        Project project =
+                projectRepository
+                        .findByIdAndUser(
+                                projectId,
+                                user)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException(
+                                        "Project not found with id : "
+                                                + projectId));
 
         projectRepository.delete(project);
     }
 
-    @Override
-    public List<ProjectResponse> getProjectsByStatus(Long userId, ProjectStatus status) {
-        User user = userRepository.findById(userId).orElseThrow(() ->
-                        new ResourceNotFoundException("User not found with id : " + userId));
 
-        return projectRepository.findByUserAndStatus(user, status)
+    @Override
+    public List<ProjectResponse> getProjectsByStatus(
+            Long userId,
+            ProjectStatus status) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found with id : " + userId));
+
+        return projectRepository
+                .findByUserAndStatus(
+                        user,
+                        status)
                 .stream()
                 .map(ProjectMapper::toResponse)
                 .collect(Collectors.toList());
     }
-
 }

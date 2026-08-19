@@ -8,6 +8,7 @@ import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,7 +23,11 @@ import lombok.Setter;
 public class SkillRequest {
 
     @NotBlank(message = "Skill name is required")
-    @Size(min = 2, max = 100, message = "Skill name must be between 2 and 100 characters")
+    @Size(
+        min = 2,
+        max = 100,
+        message = "Skill name must be between 2 and 100 characters"
+    )
     private String name;
 
     @NotNull(message = "Skill status is required")
@@ -30,5 +35,4 @@ public class SkillRequest {
 
     @FutureOrPresent(message = "Target date cannot be in the past")
     private LocalDate targetDate;
-
 }

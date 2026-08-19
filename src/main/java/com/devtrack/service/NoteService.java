@@ -15,9 +15,7 @@ public interface NoteService {
     NoteResponse getNoteById(Long userId, Long noteId);
     NoteResponse updateNote(Long userId,Long noteId,NoteRequest request);
 
-    //delete note
     void deleteNote(Long userId, Long noteId);
 
-    //search notes by title or content
     Page<NoteResponse> searchNotes(Long userId,String keyword, Pageable pageable);
 }

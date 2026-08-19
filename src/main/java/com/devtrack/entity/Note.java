@@ -25,9 +25,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Table(
 	    name = "notes",
-	    indexes = {
-	        @Index(name = "idx_notes_user_id", columnList = "user_id")
-	    }
+	    indexes = {@Index(name = "idx_notes_user_id", columnList = "user_id")}
 	)
 public class Note {
 
