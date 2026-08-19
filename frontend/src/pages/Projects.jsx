@@ -1,656 +1,280 @@
-import { useEffect, useState } from "react";
-
-import { Alert, Button, Card, Col, Container, Form, Modal, Row, Spinner, } from "react-bootstrap";
-
-import { FaEdit, FaPlus, FaTrash, FaProjectDiagram, FaTasks, FaChevronDown, FaChevronUp, } from "react-icons/fa";
-
-import { useAuth } from "../context/AuthContext";
+import { useEffect, useMemo, useState } from "react";
+import {Alert,Badge,Button,Card,Col,Container,Form,Modal,Row,Spinner,} from "react-bootstrap";
+import {FaCheckCircle,FaEdit,FaFolderOpen,FaPauseCircle,FaPlus,FaTrash,FaLayerGroup,FaRocket,FaTasks,} from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import AppNavbar from "../components/layout/AppNavbar";
+import { useAuth } from "../context/AuthContext";
+import axiosClient from "../services/axiosClient";
+import "./Projects.css";
 
-import projectService from "../services/projectService";
-import milestoneService from "../services/milestoneService";
+const STATUS = {
+    ACTIVE: "ACTIVE",
+    COMPLETED: "COMPLETED",
+    ON_HOLD: "ON_HOLD",
+};
 
+const FILTERS = {
+    ALL: "ALL",
+    ACTIVE: "ACTIVE",
+    COMPLETED: "COMPLETED",
+    ON_HOLD: "ON_HOLD",
+};
 
 function Projects() {
-
     const { auth } = useAuth();
+    const navigate = useNavigate();
+
+    const userId =
+        auth?.userId ??
+        auth?.user?.id ??
+        auth?.user?.userId ??
+        auth?.id ??
+        null;
 
     const [projects, setProjects] = useState([]);
-
     const [loading, setLoading] = useState(true);
-
+    const [saving, setSaving] = useState(false);
+    const [deletingId, setDeletingId] = useState(null);
     const [error, setError] = useState("");
-
     const [success, setSuccess] = useState("");
-
-    const [statusFilter, setStatusFilter] = useState("ALL");
-
-    const [showProjectModal, setShowProjectModal] = useState(false);
-
+    const [activeFilter, setActiveFilter] = useState(FILTERS.ALL);
+    const [showModal, setShowModal] = useState(false);
     const [editingProject, setEditingProject] = useState(null);
-
-    const [projectFormData, setProjectFormData] = useState({
+    const [formData, setFormData] = useState({
         title: "",
         description: "",
-        status: "ACTIVE",
+        status: STATUS.ACTIVE,
     });
-
-    const [submittingProject, setSubmittingProject] = useState(false);
-
-    const [deletingProjectId, setDeletingProjectId] = useState(null);
-
-    const [expandedProjects, setExpandedProjects] = useState({});
-
-    const [milestones, setMilestones] = useState({});
-
-    const [milestoneLoading, setMilestoneLoading] = useState({});
-
-    const [milestoneError, setMilestoneError] = useState({});
-
-    const [showMilestoneModal, setShowMilestoneModal] = useState(false);
-
-    const [editingMilestone, setEditingMilestone] = useState(null);
-
-    const [selectedProject, setSelectedProject] = useState(null);
-
-    const [milestoneFormData, setMilestoneFormData] = useState({
-        title: "",
-        status: "PENDING",
-        dueDate: "",
-    });
-
-    const [submittingMilestone, setSubmittingMilestone] = useState(false);
-
-    const [deletingMilestoneId, setDeletingMilestoneId] = useState(null);
-
-
-    useEffect(() => {
-
-        fetchProjects();
-
-    }, [auth?.userId, statusFilter]);
-
 
     const fetchProjects = async () => {
-
-        if (!auth?.userId) {
-
+        if (!userId) {
             setError("Unable to identify the logged-in user.");
-
             setLoading(false);
-
             return;
         }
 
         try {
-
             setLoading(true);
-
             setError("");
 
-            console.log("PROJECTS USER ID:", auth.userId);
-
-            let data;
-
-            if (statusFilter === "ALL") {
-
-                data = await projectService.getAllProjects(auth.userId);
-
-            } else {
-
-                data = await projectService.getProjectsByStatus(
-                    auth.userId,
-                    statusFilter
-                );
-            }
-
-            console.log("PROJECTS API RESPONSE:", data);
-
-            setProjects(Array.isArray(data) ? data : []);
-
-        } catch (err) {
-
-            console.error("Projects API error:", err);
-
-            console.error(
-                "Projects API response:",
-                err.response?.data
+            const response = await axiosClient.get(
+                `/api/users/${userId}/projects`
             );
 
+            const data = response?.data;
+
+            if (Array.isArray(data)) {
+                setProjects(data);
+            } else if (Array.isArray(data?.projects)) {
+                setProjects(data.projects);
+            } else if (data && typeof data === "object") {
+                setProjects([data]);
+            } else {
+                setProjects([]);
+            }
+        } catch (err) {
+            console.error("ERROR LOADING PROJECTS:", err);
             setError(
-                err.response?.data?.message ||
+                err?.response?.data?.message ||
                 "Unable to load projects."
             );
-
         } finally {
-
             setLoading(false);
-
         }
     };
 
-    const fetchMilestones = async (projectId) => {
-
-        try {
-
-            setMilestoneLoading((previous) => ({
-                ...previous,
-                [projectId]: true,
-            }));
-
-            setMilestoneError((previous) => ({
-                ...previous,
-                [projectId]: "",
-            }));
-
-            console.log(
-                "MILESTONE PROJECT ID:",
-                projectId
-            );
-
-            const data =
-                await milestoneService.getMilestones(projectId);
-
-            console.log(
-                "MILESTONES API RESPONSE:",
-                data
-            );
-
-            setMilestones((previous) => ({
-                ...previous,
-                [projectId]: Array.isArray(data) ? data : [],
-            }));
-
-        } catch (err) {
-
-            console.error(
-                "Milestones API error:",
-                err
-            );
-
-            console.error(
-                "Milestones API response:",
-                err.response?.data
-            );
-
-            setMilestoneError((previous) => ({
-                ...previous,
-                [projectId]:
-                    err.response?.data?.message ||
-                    "Unable to load milestones.",
-            }));
-
-        } finally {
-
-            setMilestoneLoading((previous) => ({
-                ...previous,
-                [projectId]: false,
-            }));
-
+    useEffect(() => {
+        if (userId) {
+            fetchProjects();
+        } else {
+            setLoading(false);
         }
-    };
+    }, [userId]);
 
+    const handleChange = (event) => {
+        const { name, value } = event.target;
 
-    const toggleMilestones = async (projectId) => {
-
-        const currentlyExpanded =
-            expandedProjects[projectId];
-
-        setExpandedProjects((previous) => ({
+        setFormData((previous) => ({
             ...previous,
-            [projectId]: !currentlyExpanded,
+            [name]: value,
         }));
-
-        if (!currentlyExpanded) {
-
-            await fetchMilestones(projectId);
-
-        }
     };
-
 
     const handleAddProject = () => {
-
         setEditingProject(null);
-
-        setProjectFormData({
+        setFormData({
             title: "",
             description: "",
-            status: "ACTIVE",
+            status: STATUS.ACTIVE,
         });
-
         setError("");
-
         setSuccess("");
-
-        setShowProjectModal(true);
+        setShowModal(true);
     };
-
 
     const handleEditProject = (project) => {
-
         setEditingProject(project);
-
-        setProjectFormData({
-            title: project.title || "",
-            description: project.description || "",
-            status: project.status || "ACTIVE",
+        setFormData({
+            title: project?.title || "",
+            description: project?.description || "",
+            status: project?.status || STATUS.ACTIVE,
         });
-
         setError("");
-
         setSuccess("");
-
-        setShowProjectModal(true);
+        setShowModal(true);
     };
 
-
-    const handleCloseProjectModal = () => {
-
-        if (submittingProject) {
+    const handleCloseModal = () => {
+        if (saving) {
             return;
         }
 
-        setShowProjectModal(false);
-
+        setShowModal(false);
         setEditingProject(null);
-
-        setProjectFormData({
+        setFormData({
             title: "",
             description: "",
-            status: "ACTIVE",
+            status: STATUS.ACTIVE,
         });
     };
 
+    const createProject = async () => {
+        if (!userId) {
+            setError("Unable to identify the logged-in user.");
+            return;
+        }
 
-    const handleProjectChange = (event) => {
+        const title = formData.title.trim();
+        const description = formData.description.trim();
 
-        const {
-            name,
-            value,
-        } = event.target;
-
-        setProjectFormData((previous) => ({
-            ...previous,
-            [name]: value,
-        }));
-    };
-
-
-    const handleProjectSubmit = async (event) => {
-
-        event.preventDefault();
-
-        setError("");
-
-        setSuccess("");
-
-        if (!projectFormData.title.trim()) {
-
+        if (!title) {
             setError("Project title is required.");
-
             return;
         }
 
         try {
+            setSaving(true);
+            setError("");
+            setSuccess("");
 
-            setSubmittingProject(true);
+            const response = await axiosClient.post(
+                `/api/users/${userId}/projects`,
+                {
+                    title,
+                    description,
+                    status: formData.status,
+                }
+            );
 
-            if (editingProject) {
+            const createdProject = response?.data;
 
-                console.log(
-                    "UPDATING PROJECT:",
-                    editingProject.id
-                );
-
-                await projectService.updateProject(
-                    auth.userId,
-                    editingProject.id,
-                    {
-                        title:
-                            projectFormData.title.trim(),
-
-                        description:
-                            projectFormData.description.trim(),
-
-                        status:
-                            projectFormData.status,
-                    }
-                );
-
-                setSuccess(
-                    "Project updated successfully."
-                );
-
-            } else {
-
-                console.log(
-                    "CREATING PROJECT"
-                );
-
-                await projectService.createProject(
-                    auth.userId,
-                    {
-                        title:
-                            projectFormData.title.trim(),
-
-                        description:
-                            projectFormData.description.trim(),
-
-                        status:
-                            projectFormData.status,
-                    }
-                );
-
-                setSuccess(
-                    "Project created successfully."
+            if (!createdProject?.id) {
+                throw new Error(
+                    "Project was created but backend did not return a valid project."
                 );
             }
 
-            setShowProjectModal(false);
+            setProjects((previousProjects) => [
+                ...previousProjects,
+                createdProject,
+            ]);
 
+            setSuccess("Project created successfully.");
+            setShowModal(false);
             setEditingProject(null);
-
-            setProjectFormData({
+            setFormData({
                 title: "",
                 description: "",
-                status: "ACTIVE",
+                status: STATUS.ACTIVE,
             });
-
-            await fetchProjects();
-
         } catch (err) {
-
-            console.error(
-                "Save project error:",
-                err
-            );
-
-            console.error(
-                "Save project response:",
-                err.response?.data
-            );
-
+            console.error("ERROR CREATING PROJECT:", err);
             setError(
-                err.response?.data?.message ||
-                err.response?.data ||
-                "Unable to save project."
+                err?.response?.data?.message ||
+                err?.message ||
+                "Unable to create project."
             );
-
         } finally {
-
-            setSubmittingProject(false);
-
+            setSaving(false);
         }
     };
 
+    const updateProject = async () => {
+        if (!userId || !editingProject?.id) {
+            setError("Invalid project information.");
+            return;
+        }
 
-    const handleDeleteProject = async (projectId) => {
+        const title = formData.title.trim();
+        const description = formData.description.trim();
 
-        const confirmed = window.confirm(
-            "Are you sure you want to delete this project?"
-        );
-
-        if (!confirmed) {
+        if (!title) {
+            setError("Project title is required.");
             return;
         }
 
         try {
-
-            setDeletingProjectId(projectId);
-
+            setSaving(true);
             setError("");
-
             setSuccess("");
 
-            console.log(
-                "DELETING PROJECT:",
-                projectId
+            const response = await axiosClient.put(
+                `/api/users/${userId}/projects/${editingProject.id}`,
+                {
+                    title,
+                    description,
+                    status: formData.status,
+                }
             );
 
-            await projectService.deleteProject(
-                auth.userId,
-                projectId
-            );
+            const updatedProject = response?.data;
 
-            setSuccess(
-                "Project deleted successfully."
-            );
-
-            await fetchProjects();
-
-        } catch (err) {
-
-            console.error(
-                "Delete project error:",
-                err
-            );
-
-            console.error(
-                "Delete project response:",
-                err.response?.data
-            );
-
-            setError(
-                err.response?.data?.message ||
-                err.response?.data ||
-                "Unable to delete project."
-            );
-
-        } finally {
-
-            setDeletingProjectId(null);
-
-        }
-    };
-
-
-    /* =========================
-       MILESTONE HANDLERS
-    ========================= */
-
-    const handleAddMilestone = (project) => {
-
-        setSelectedProject(project);
-
-        setEditingMilestone(null);
-
-        setMilestoneFormData({
-            title: "",
-            status: "PENDING",
-            dueDate: "",
-        });
-
-        setError("");
-
-        setSuccess("");
-
-        setShowMilestoneModal(true);
-    };
-
-
-    const handleEditMilestone = (project, milestone) => {
-
-        setSelectedProject(project);
-
-        setEditingMilestone(milestone);
-
-        setMilestoneFormData({
-            title: milestone.title || "",
-            status: milestone.status || "PENDING",
-            dueDate: milestone.dueDate || "",
-        });
-
-        setError("");
-
-        setSuccess("");
-
-        setShowMilestoneModal(true);
-    };
-
-
-    const handleCloseMilestoneModal = () => {
-
-        if (submittingMilestone) {
-            return;
-        }
-
-        setShowMilestoneModal(false);
-
-        setSelectedProject(null);
-
-        setEditingMilestone(null);
-
-        setMilestoneFormData({
-            title: "",
-            status: "PENDING",
-            dueDate: "",
-        });
-    };
-
-
-    const handleMilestoneChange = (event) => {
-
-        const {
-            name,
-            value,
-        } = event.target;
-
-        setMilestoneFormData((previous) => ({
-            ...previous,
-            [name]: value,
-        }));
-    };
-
-
-    const handleMilestoneSubmit = async (event) => {
-
-        event.preventDefault();
-
-        setError("");
-
-        setSuccess("");
-
-        if (!milestoneFormData.title.trim()) {
-
-            setError(
-                "Milestone title is required."
-            );
-
-            return;
-        }
-
-        if (!selectedProject) {
-
-            setError(
-                "Project information is missing."
-            );
-
-            return;
-        }
-
-        try {
-
-            setSubmittingMilestone(true);
-
-            const milestoneData = {
-                title:
-                    milestoneFormData.title.trim(),
-
-                status:
-                    milestoneFormData.status,
-
-                dueDate:
-                    milestoneFormData.dueDate || null,
-            };
-
-
-            if (editingMilestone) {
-
-                console.log(
-                    "UPDATING MILESTONE:",
-                    editingMilestone.id
-                );
-
-                await milestoneService.updateMilestone(
-                    editingMilestone.id,
-                    milestoneData
-                );
-
-                setSuccess(
-                    "Milestone updated successfully."
-                );
-
-            } else {
-
-                console.log(
-                    "CREATING MILESTONE FOR PROJECT:",
-                    selectedProject.id
-                );
-
-                await milestoneService.createMilestone(
-                    selectedProject.id,
-                    milestoneData
-                );
-
-                setSuccess(
-                    "Milestone created successfully."
+            if (!updatedProject?.id) {
+                throw new Error(
+                    "Backend did not return the updated project."
                 );
             }
 
-
-            setShowMilestoneModal(false);
-
-            setEditingMilestone(null);
-
-            setSelectedProject(null);
-
-            setMilestoneFormData({
-                title: "",
-                status: "PENDING",
-                dueDate: "",
-            });
-
-
-            await fetchMilestones(
-                editingMilestone
-                    ? selectedProject.id
-                    : selectedProject.id
+            setProjects((previousProjects) =>
+                previousProjects.map((project) =>
+                    project.id === editingProject.id
+                        ? updatedProject
+                        : project
+                )
             );
 
+            setSuccess("Project updated successfully.");
+            setShowModal(false);
+            setEditingProject(null);
         } catch (err) {
-
-            console.error(
-                "Save milestone error:",
-                err
-            );
-
-            console.error(
-                "Save milestone response:",
-                err.response?.data
-            );
-
+            console.error("ERROR UPDATING PROJECT:", err);
             setError(
-                err.response?.data?.message ||
-                err.response?.data ||
-                "Unable to save milestone."
+                err?.response?.data?.message ||
+                err?.message ||
+                "Unable to update project."
             );
-
         } finally {
-
-            setSubmittingMilestone(false);
-
+            setSaving(false);
         }
     };
 
+    const handleSubmit = async (event) => {
+        event.preventDefault();
 
-    const handleDeleteMilestone = async (
-        projectId,
-        milestoneId
-    ) => {
+        if (editingProject) {
+            await updateProject();
+        } else {
+            await createProject();
+        }
+    };
+
+    const handleDeleteProject = async (project) => {
+        if (!project?.id || !userId) {
+            return;
+        }
 
         const confirmed = window.confirm(
-            "Are you sure you want to delete this milestone?"
+            `Are you sure you want to delete "${project.title}"?`
         );
 
         if (!confirmed) {
@@ -658,1152 +282,514 @@ function Projects() {
         }
 
         try {
-
-            setDeletingMilestoneId(milestoneId);
-
+            setDeletingId(project.id);
             setError("");
-
             setSuccess("");
 
-            console.log(
-                "DELETING MILESTONE:",
-                milestoneId
+            await axiosClient.delete(
+                `/api/users/${userId}/projects/${project.id}`
             );
 
-            await milestoneService.deleteMilestone(
-                milestoneId
+            setProjects((previousProjects) =>
+                previousProjects.filter(
+                    (item) => item.id !== project.id
+                )
             );
 
-            setSuccess(
-                "Milestone deleted successfully."
-            );
-
-            await fetchMilestones(projectId);
-
+            setSuccess("Project deleted successfully.");
         } catch (err) {
-
-            console.error(
-                "Delete milestone error:",
-                err
-            );
-
-            console.error(
-                "Delete milestone response:",
-                err.response?.data
-            );
-
+            console.error("ERROR DELETING PROJECT:", err);
             setError(
-                err.response?.data?.message ||
-                err.response?.data ||
-                "Unable to delete milestone."
+                err?.response?.data?.message ||
+                err?.message ||
+                "Unable to delete project."
             );
-
         } finally {
-
-            setDeletingMilestoneId(null);
-
+            setDeletingId(null);
         }
     };
 
-
-    /* =========================
-       STATUS STYLES
-    ========================= */
-
-    const getProjectStatusClass = (status) => {
-
-        switch (status) {
-
-            case "ACTIVE":
-                return "bg-primary";
-
-            case "COMPLETED":
-                return "bg-success";
-
-            case "ON_HOLD":
-                return "bg-warning text-dark";
-
-            default:
-                return "bg-secondary";
+    const filteredProjects = useMemo(() => {
+        if (activeFilter === FILTERS.ALL) {
+            return projects;
         }
+
+        return projects.filter(
+            (project) => project.status === activeFilter
+        );
+    }, [projects, activeFilter]);
+
+    const activeProjectsCount = projects.filter(
+        (project) => project.status === STATUS.ACTIVE
+    ).length;
+
+    const completedProjectsCount = projects.filter(
+        (project) => project.status === STATUS.COMPLETED
+    ).length;
+
+    const onHoldProjectsCount = projects.filter(
+        (project) => project.status === STATUS.ON_HOLD
+    ).length;
+
+    const renderStatusBadge = (status) => {
+        if (status === STATUS.COMPLETED) {
+            return (
+                <Badge className="project-status-badge completed-badge">
+                    <FaCheckCircle className="me-1" />
+                    Completed
+                </Badge>
+            );
+        }
+
+        if (status === STATUS.ON_HOLD) {
+            return (
+                <Badge className="project-status-badge hold-badge">
+                    <FaPauseCircle className="me-1" />
+                    On Hold
+                </Badge>
+            );
+        }
+
+        return (
+            <Badge className="project-status-badge active-badge">
+                <FaFolderOpen className="me-1" />
+                Active
+            </Badge>
+        );
     };
 
+    const renderFilterButton = (label, value) => {
+        const selected = activeFilter === value;
 
-    const getMilestoneStatusClass = (status) => {
-
-        switch (status) {
-
-            case "DONE":
-                return "bg-success";
-
-            case "IN_PROGRESS":
-                return "bg-primary";
-
-            case "PENDING":
-                return "bg-secondary";
-
-            default:
-                return "bg-secondary";
-        }
+        return (
+            <Button
+                type="button"
+                variant={selected ? "primary" : "light"}
+                className={
+                    selected
+                        ? "project-filter active"
+                        : "project-filter"
+                }
+                onClick={() => setActiveFilter(value)}
+            >
+                {label}
+            </Button>
+        );
     };
 
-
-    const getMilestoneStatusText = (status) => {
-
-        switch (status) {
-
-            case "IN_PROGRESS":
-                return "IN PROGRESS";
-
-            case "DONE":
-                return "DONE";
-
-            case "PENDING":
-                return "PENDING";
-
-            default:
-                return status;
-        }
+    const handleViewMilestones = (projectId) => {
+        navigate(`/projects/${projectId}/milestones`);
     };
-
-    const activeCount =
-        projects.filter(
-            (project) =>
-                project.status === "ACTIVE"
-        ).length;
-
-
-    const completedCount =
-        projects.filter(
-            (project) =>
-                project.status === "COMPLETED"
-        ).length;
-
-
-    const onHoldCount =
-        projects.filter(
-            (project) =>
-                project.status === "ON_HOLD"
-        ).length;
 
     return (
         <>
             <AppNavbar />
 
-            <Container className="py-4 py-lg-5">
-                <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
-
-                    <div>
-
-                        <h1 className="fw-bold mb-1">
-                            Projects
-                        </h1>
-
-                        <p className="text-muted mb-0">
-                            Manage your projects and track their progress.
-                        </p>
-
-                    </div>
-
-
-                    <Button
-                        variant="primary"
-                        onClick={handleAddProject}
-                    >
-                        <FaPlus className="me-2" />
-                        Add Project
-                    </Button>
-
-                </div>
-                {success && (
-
-                    <Alert
-                        variant="success"
-                        dismissible
-                        onClose={() =>
-                            setSuccess("")
-                        }
-                    >
-                        {success}
-                    </Alert>
-
-                )}
-
-
-                {error && (
-
-                    <Alert
-                        variant="danger"
-                        dismissible
-                        onClose={() =>
-                            setError("")
-                        }
-                    >
-                        {error}
-                    </Alert>
-
-                )}
-
-                <Row className="g-4 mb-4">
-
-                    <Col xs={12} md={4}>
-
-                        <Card className="border-0 shadow-sm h-100">
-
-                            <Card.Body>
-
-                                <div className="text-muted small">
-                                    Active Projects
-                                </div>
-
-                                <div className="fs-2 fw-bold text-primary">
-                                    {activeCount}
-                                </div>
-
-                            </Card.Body>
-
-                        </Card>
-
-                    </Col>
-
-
-                    <Col xs={12} md={4}>
-
-                        <Card className="border-0 shadow-sm h-100">
-
-                            <Card.Body>
-
-                                <div className="text-muted small">
-                                    Completed Projects
-                                </div>
-
-                                <div className="fs-2 fw-bold text-success">
-                                    {completedCount}
-                                </div>
-
-                            </Card.Body>
-
-                        </Card>
-
-                    </Col>
-
-
-                    <Col xs={12} md={4}>
-
-                        <Card className="border-0 shadow-sm h-100">
-
-                            <Card.Body>
-
-                                <div className="text-muted small">
-                                    On Hold
-                                </div>
-
-                                <div className="fs-2 fw-bold text-warning">
-                                    {onHoldCount}
-                                </div>
-
-                            </Card.Body>
-
-                        </Card>
-
-                    </Col>
-
-                </Row>
-
-                <Card className="border-0 shadow-sm mb-4">
-
-                    <Card.Body>
-
-                        <div className="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-
-                            <div>
-
-                                <h5 className="fw-bold mb-1">
-                                    My Projects
-                                </h5>
-
-                                <small className="text-muted">
-                                    Filter projects by their current status.
-                                </small>
-
+            <main className="projects-page">
+                <Container>
+                    <div className="projects-header">
+                        <div>
+                            <div className="page-label">
+                                <FaRocket className="me-2" />
+                                Project Management
                             </div>
 
+                            <h1>My Projects</h1>
 
-                            <div className="d-flex gap-2 flex-wrap">
-
-                                <Button
-                                    size="sm"
-                                    variant={
-                                        statusFilter === "ALL"
-                                            ? "primary"
-                                            : "outline-primary"
-                                    }
-                                    onClick={() =>
-                                        setStatusFilter("ALL")
-                                    }
-                                >
-                                    All
-                                </Button>
-
-
-                                <Button
-                                    size="sm"
-                                    variant={
-                                        statusFilter === "ACTIVE"
-                                            ? "primary"
-                                            : "outline-primary"
-                                    }
-                                    onClick={() =>
-                                        setStatusFilter("ACTIVE")
-                                    }
-                                >
-                                    Active
-                                </Button>
-
-
-                                <Button
-                                    size="sm"
-                                    variant={
-                                        statusFilter === "COMPLETED"
-                                            ? "success"
-                                            : "outline-success"
-                                    }
-                                    onClick={() =>
-                                        setStatusFilter("COMPLETED")
-                                    }
-                                >
-                                    Completed
-                                </Button>
-
-
-                                <Button
-                                    size="sm"
-                                    variant={
-                                        statusFilter === "ON_HOLD"
-                                            ? "warning"
-                                            : "outline-warning"
-                                    }
-                                    onClick={() =>
-                                        setStatusFilter("ON_HOLD")
-                                    }
-                                >
-                                    On Hold
-                                </Button>
-
-                            </div>
-
+                            <p>
+                                Organize your work, track progress,
+                                and keep your development goals
+                                moving forward.
+                            </p>
                         </div>
 
-                    </Card.Body>
-
-                </Card>
-
-
-                {/* ================= LOADING ================= */}
-
-                {loading && (
-
-                    <div className="text-center py-5">
-
-                        <Spinner animation="border" />
-
-                        <p className="text-muted mt-3">
-                            Loading projects...
-                        </p>
-
+                        <Button
+                            type="button"
+                            className="add-project-btn"
+                            onClick={handleAddProject}
+                        >
+                            <FaPlus className="me-2" />
+                            Add Project
+                        </Button>
                     </div>
 
-                )}
-
-
-                {!loading &&
-                    !error &&
-                    projects.length === 0 && (
-
-                        <Card className="border-0 shadow-sm">
-
-                            <Card.Body className="text-center py-5">
-
-                                <FaProjectDiagram
-                                    size={45}
-                                    className="text-muted mb-3"
-                                />
-
-                                <h5 className="fw-bold">
-                                    No Projects Found
-                                </h5>
-
-                                <p className="text-muted">
-                                    You haven't added any projects yet.
-                                </p>
-
-                                <Button
-                                    variant="primary"
-                                    onClick={handleAddProject}
-                                >
-                                    <FaPlus className="me-2" />
-                                    Add Your First Project
-                                </Button>
-
-                            </Card.Body>
-
-                        </Card>
+                    {error && (
+                        <Alert
+                            variant="danger"
+                            dismissible
+                            onClose={() => setError("")}
+                            className="project-alert"
+                        >
+                            {error}
+                        </Alert>
                     )}
 
-                {!loading &&
-                    projects.length > 0 && (
+                    {success && (
+                        <Alert
+                            variant="success"
+                            dismissible
+                            onClose={() => setSuccess("")}
+                            className="project-alert"
+                        >
+                            {success}
+                        </Alert>
+                    )}
 
-                        <Row className="g-4">
+                    <Row className="g-4 mb-4">
+                        <Col xs={12} md={4}>
+                            <Card className="project-stat-card">
+                                <Card.Body>
+                                    <div className="stat-content">
+                                        <div>
+                                            <span className="stat-label">
+                                                Active Projects
+                                            </span>
 
-                            {projects.map((project) => {
+                                            <h2>
+                                                {activeProjectsCount}
+                                            </h2>
 
-                                const projectMilestones =
-                                    milestones[project.id] || [];
+                                            <small>
+                                                Currently in progress
+                                            </small>
+                                        </div>
 
-                                const isExpanded =
-                                    expandedProjects[project.id];
+                                        <div className="stat-icon active-icon">
+                                            <FaFolderOpen />
+                                        </div>
+                                    </div>
 
-                                return (
+                                    <div className="stat-decoration" />
+                                </Card.Body>
+                            </Card>
+                        </Col>
 
-                                    <Col
-                                        xs={12}
-                                        md={6}
-                                        lg={4}
-                                        key={project.id}
-                                    >
+                        <Col xs={12} md={4}>
+                            <Card className="project-stat-card">
+                                <Card.Body>
+                                    <div className="stat-content">
+                                        <div>
+                                            <span className="stat-label">
+                                                Completed
+                                            </span>
 
-                                        <Card className="border-0 shadow-sm h-100">
+                                            <h2 className="success-number">
+                                                {completedProjectsCount}
+                                            </h2>
 
-                                            <Card.Body className="d-flex flex-column">
+                                            <small>
+                                                Projects finished
+                                            </small>
+                                        </div>
 
+                                        <div className="stat-icon completed-icon">
+                                            <FaCheckCircle />
+                                        </div>
+                                    </div>
 
-                                                <div className="d-flex justify-content-between align-items-start mb-3">
+                                    <div className="stat-decoration" />
+                                </Card.Body>
+                            </Card>
+                        </Col>
 
-                                                    <h5 className="fw-bold mb-0">
+                        <Col xs={12} md={4}>
+                            <Card className="project-stat-card">
+                                <Card.Body>
+                                    <div className="stat-content">
+                                        <div>
+                                            <span className="stat-label">
+                                                On Hold
+                                            </span>
 
-                                                        {project.title}
+                                            <h2 className="warning-number">
+                                                {onHoldProjectsCount}
+                                            </h2>
 
-                                                    </h5>
+                                            <small>
+                                                Projects paused
+                                            </small>
+                                        </div>
 
+                                        <div className="stat-icon hold-icon">
+                                            <FaPauseCircle />
+                                        </div>
+                                    </div>
 
-                                                    <span
-                                                        className={`badge ${getProjectStatusClass(
-                                                            project.status
-                                                        )}`}
-                                                    >
+                                    <div className="stat-decoration" />
+                                </Card.Body>
+                            </Card>
+                        </Col>
+                    </Row>
 
-                                                        {project.status ===
-                                                            "ON_HOLD"
-                                                            ? "ON HOLD"
-                                                            : project.status}
+                    <Card className="projects-container">
+                        <Card.Body>
+                            <div className="projects-section-header">
+                                <div>
+                                    <h3>All Projects</h3>
+                                    <p>
+                                        View and manage your
+                                        development projects.
+                                    </p>
+                                </div>
 
-                                                    </span>
+                                <div className="filter-container">
+                                    {renderFilterButton(
+                                        "All",
+                                        FILTERS.ALL
+                                    )}
+                                    {renderFilterButton(
+                                        "Active",
+                                        FILTERS.ACTIVE
+                                    )}
+                                    {renderFilterButton(
+                                        "Completed",
+                                        FILTERS.COMPLETED
+                                    )}
+                                    {renderFilterButton(
+                                        "On Hold",
+                                        FILTERS.ON_HOLD
+                                    )}
+                                </div>
+                            </div>
 
-                                                </div>
+                            {loading ? (
+                                <div className="projects-loading">
+                                    <Spinner
+                                        animation="border"
+                                        variant="primary"
+                                    />
+                                    <p>Loading projects...</p>
+                                </div>
+                            ) : filteredProjects.length === 0 ? (
+                                <div className="empty-projects">
+                                    <div className="empty-icon">
+                                        <FaLayerGroup />
+                                    </div>
 
-                                                <p className="text-muted">
+                                    <h4>No projects found</h4>
 
-                                                    {project.description
-                                                        ? project.description
-                                                        : "No description provided."}
+                                    <p>
+                                        {projects.length === 0
+                                            ? "Start by creating your first project and track your development journey."
+                                            : "No projects match the selected status."}
+                                    </p>
 
-                                                </p>
-
-                                                <Card
-                                                    className="border mt-2 mb-3"
-                                                >
-
-                                                    <Card.Body className="p-3">
-
-                                                        <div className="d-flex justify-content-between align-items-center">
-
-                                                            <div className="d-flex align-items-center">
-
-                                                                <FaTasks className="text-primary me-2" />
-
-                                                                <strong>
-                                                                    Milestones
-                                                                </strong>
-
-                                                                {isExpanded &&
-                                                                    milestones[
-                                                                    project.id
-                                                                    ] && (
-
-                                                                        <span className="badge bg-light text-dark ms-2">
-
-                                                                            {
-                                                                                projectMilestones.length
-                                                                            }
-
-                                                                        </span>
-                                                                    )}
-
-                                                            </div>
-
-
-                                                            <div className="d-flex gap-1">
-
-                                                                <Button
-                                                                    variant="outline-primary"
-                                                                    size="sm"
-                                                                    onClick={() =>
-                                                                        handleAddMilestone(
-                                                                            project
-                                                                        )
-                                                                    }
-                                                                    title="Add Milestone"
-                                                                >
-                                                                    <FaPlus />
-                                                                </Button>
-
-
-                                                                <Button
-                                                                    variant="outline-secondary"
-                                                                    size="sm"
-                                                                    onClick={() =>
-                                                                        toggleMilestones(
-                                                                            project.id
-                                                                        )
-                                                                    }
-                                                                    title={
-                                                                        isExpanded
-                                                                            ? "Hide Milestones"
-                                                                            : "Show Milestones"
-                                                                    }
-                                                                >
-
-                                                                    {isExpanded ? (
-                                                                        <FaChevronUp />
-                                                                    ) : (
-                                                                        <FaChevronDown />
-                                                                    )}
-
-                                                                </Button>
-
-                                                            </div>
-
+                                    {projects.length === 0 && (
+                                        <Button
+                                            type="button"
+                                            className="add-project-btn"
+                                            onClick={handleAddProject}
+                                        >
+                                            <FaPlus className="me-2" />
+                                            Create Your First Project
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : (
+                                <Row className="g-4">
+                                    {filteredProjects.map((project) => (
+                                        <Col
+                                            xs={12}
+                                            md={6}
+                                            lg={4}
+                                            key={project.id}
+                                        >
+                                            <Card className="project-card">
+                                                <Card.Body>
+                                                    <div className="project-card-top">
+                                                        <div className="project-folder-icon">
+                                                            <FaFolderOpen />
                                                         </div>
 
-                                                        {isExpanded && (
-
-                                                            <div className="mt-3">
-
-                                                                {milestoneLoading[
-                                                                    project.id
-                                                                ] && (
-
-                                                                        <div className="text-center py-3">
-
-                                                                            <Spinner
-                                                                                animation="border"
-                                                                                size="sm"
-                                                                            />
-
-                                                                            <div className="small text-muted mt-2">
-                                                                                Loading milestones...
-                                                                            </div>
-
-                                                                        </div>
-
-                                                                    )}
-
-
-                                                                {milestoneError[
-                                                                    project.id
-                                                                ] && (
-
-                                                                        <Alert
-                                                                            variant="danger"
-                                                                            className="small"
-                                                                        >
-                                                                            {
-                                                                                milestoneError[
-                                                                                project.id
-                                                                                ]
-                                                                            }
-                                                                        </Alert>
-
-                                                                    )}
-
-
-                                                                {!milestoneLoading[
-                                                                    project.id
-                                                                ] &&
-                                                                    !milestoneError[
-                                                                    project.id
-                                                                    ] &&
-                                                                    projectMilestones.length ===
-                                                                    0 && (
-
-                                                                        <div className="text-center py-3">
-
-                                                                            <div className="text-muted small mb-2">
-                                                                                No milestones yet.
-                                                                            </div>
-
-                                                                            <Button
-                                                                                size="sm"
-                                                                                variant="primary"
-                                                                                onClick={() =>
-                                                                                    handleAddMilestone(
-                                                                                        project
-                                                                                    )
-                                                                                }
-                                                                            >
-                                                                                <FaPlus className="me-1" />
-                                                                                Add Milestone
-                                                                            </Button>
-
-                                                                        </div>
-
-                                                                    )}
-
-
-                                                                {!milestoneLoading[
-                                                                    project.id
-                                                                ] &&
-                                                                    projectMilestones.length >
-                                                                    0 && (
-
-                                                                        <div>
-
-                                                                            {projectMilestones.map(
-                                                                                (
-                                                                                    milestone
-                                                                                ) => (
-
-                                                                                    <div
-                                                                                        key={
-                                                                                            milestone.id
-                                                                                        }
-                                                                                        className="border rounded p-2 mb-2"
-                                                                                    >
-
-                                                                                        <div className="d-flex justify-content-between align-items-start gap-2">
-
-                                                                                            <div className="flex-grow-1">
-
-                                                                                                <div className="fw-semibold">
-
-                                                                                                    {
-                                                                                                        milestone.title
-                                                                                                    }
-
-                                                                                                </div>
-
-
-                                                                                                {milestone.dueDate && (
-
-                                                                                                    <small className="text-muted">
-
-                                                                                                        Due:{" "}
-                                                                                                        {
-                                                                                                            milestone.dueDate
-                                                                                                        }
-
-                                                                                                    </small>
-
-                                                                                                )}
-
-                                                                                            </div>
-
-
-                                                                                            <span
-                                                                                                className={`badge ${getMilestoneStatusClass(
-                                                                                                    milestone.status
-                                                                                                )}`}
-                                                                                            >
-
-                                                                                                {getMilestoneStatusText(
-                                                                                                    milestone.status
-                                                                                                )}
-
-                                                                                            </span>
-
-                                                                                        </div>
-
-
-                                                                                        <div className="d-flex gap-2 mt-2">
-
-                                                                                            <Button
-                                                                                                size="sm"
-                                                                                                variant="outline-primary"
-                                                                                                onClick={() =>
-                                                                                                    handleEditMilestone(
-                                                                                                        project,
-                                                                                                        milestone
-                                                                                                    )
-                                                                                                }
-                                                                                            >
-
-                                                                                                <FaEdit className="me-1" />
-
-                                                                                                Edit
-
-                                                                                            </Button>
-
-
-                                                                                            <Button
-                                                                                                size="sm"
-                                                                                                variant="outline-danger"
-                                                                                                onClick={() =>
-                                                                                                    handleDeleteMilestone(
-                                                                                                        project.id,
-                                                                                                        milestone.id
-                                                                                                    )
-                                                                                                }
-                                                                                                disabled={
-                                                                                                    deletingMilestoneId ===
-                                                                                                    milestone.id
-                                                                                                }
-                                                                                            >
-
-                                                                                                {deletingMilestoneId ===
-                                                                                                    milestone.id ? (
-                                                                                                    <Spinner
-                                                                                                        animation="border"
-                                                                                                        size="sm"
-                                                                                                    />
-                                                                                                ) : (
-                                                                                                    <>
-                                                                                                        <FaTrash className="me-1" />
-                                                                                                        Delete
-                                                                                                    </>
-                                                                                                )}
-
-                                                                                            </Button>
-
-                                                                                        </div>
-
-                                                                                    </div>
-
-                                                                                )
-                                                                            )}
-
-                                                                        </div>
-
-                                                                    )}
-
-                                                            </div>
-
+                                                        {renderStatusBadge(
+                                                            project.status
                                                         )}
+                                                    </div>
 
-                                                    </Card.Body>
+                                                    <h4>
+                                                        {project.title}
+                                                    </h4>
 
-                                                </Card>
+                                                    <p className="project-description">
+                                                        {project.description ||
+                                                            "No description provided."}
+                                                    </p>
 
+                                                    <div className="project-divider" />
 
-                                                <div className="d-flex gap-2 mt-auto">
+                                                    <div className="project-actions">
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline-primary"
+                                                            size="sm"
+                                                            className="milestone-project-btn"
+                                                            onClick={() =>
+                                                                handleViewMilestones(
+                                                                    project.id
+                                                                )
+                                                            }
+                                                        >
+                                                            <FaTasks className="me-1" />
+                                                            Milestones
+                                                        </Button>
 
-                                                    <Button
-                                                        variant="outline-primary"
-                                                        className="flex-grow-1"
-                                                        onClick={() =>
-                                                            handleEditProject(
-                                                                project
-                                                            )
-                                                        }
-                                                    >
+                                                        <Button
+                                                            type="button"
+                                                            variant="light"
+                                                            className="edit-project-btn"
+                                                            onClick={() =>
+                                                                handleEditProject(
+                                                                    project
+                                                                )
+                                                            }
+                                                        >
+                                                            <FaEdit className="me-2" />
+                                                            Edit
+                                                        </Button>
 
-                                                        <FaEdit className="me-2" />
-
-                                                        Edit
-
-                                                    </Button>
-
-
-                                                    <Button
-                                                        variant="outline-danger"
-                                                        onClick={() =>
-                                                            handleDeleteProject(
+                                                        <Button
+                                                            type="button"
+                                                            variant="light"
+                                                            className="delete-project-btn"
+                                                            disabled={
+                                                                deletingId ===
                                                                 project.id
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            deletingProjectId ===
-                                                            project.id
-                                                        }
-                                                    >
-
-                                                        {deletingProjectId ===
+                                                            }
+                                                            onClick={() =>
+                                                                handleDeleteProject(
+                                                                    project
+                                                                )
+                                                            }
+                                                        >
+                                                            {deletingId ===
                                                             project.id ? (
-                                                            <Spinner
-                                                                size="sm"
-                                                                animation="border"
-                                                            />
-                                                        ) : (
-                                                            <FaTrash />
-                                                        )}
-
-                                                    </Button>
-
-                                                </div>
-
-                                            </Card.Body>
-
-                                        </Card>
-
-                                    </Col>
-
-                                );
-
-                            })}
-
-                        </Row>
-
-                    )}
-
-            </Container>
+                                                                <Spinner
+                                                                    size="sm"
+                                                                    animation="border"
+                                                                />
+                                                            ) : (
+                                                                <>
+                                                                    <FaTrash className="me-2" />
+                                                                    Delete
+                                                                </>
+                                                            )}
+                                                        </Button>
+                                                    </div>
+                                                </Card.Body>
+                                            </Card>
+                                        </Col>
+                                    ))}
+                                </Row>
+                            )}
+                        </Card.Body>
+                    </Card>
+                </Container>
+            </main>
 
             <Modal
-                show={showProjectModal}
-                onHide={handleCloseProjectModal}
+                show={showModal}
+                onHide={handleCloseModal}
                 centered
+                className="project-modal"
             >
-
                 <Modal.Header closeButton>
-
-                    <Modal.Title className="fw-bold">
-
+                    <Modal.Title>
                         {editingProject
                             ? "Edit Project"
-                            : "Add Project"}
-
+                            : "Create New Project"}
                     </Modal.Title>
-
                 </Modal.Header>
 
-
-                <Form onSubmit={handleProjectSubmit}>
-
+                <Form onSubmit={handleSubmit}>
                     <Modal.Body>
-
-                        <Form.Group className="mb-3">
-
-                            <Form.Label>
-                                Project Title
-                            </Form.Label>
+                        <Form.Group className="mb-4">
+                            <Form.Label>Project Title</Form.Label>
 
                             <Form.Control
                                 type="text"
                                 name="title"
-                                value={
-                                    projectFormData.title
-                                }
-                                onChange={
-                                    handleProjectChange
-                                }
-                                placeholder="Enter project title"
-                                minLength={3}
+                                placeholder="e.g. Portfolio Website"
+                                value={formData.title}
+                                onChange={handleChange}
+                                disabled={saving}
                                 maxLength={150}
                                 required
-                                disabled={
-                                    submittingProject
-                                }
                             />
-
                         </Form.Group>
 
-
-                        <Form.Group className="mb-3">
-
-                            <Form.Label>
-                                Description
-                            </Form.Label>
+                        <Form.Group className="mb-4">
+                            <Form.Label>Description</Form.Label>
 
                             <Form.Control
                                 as="textarea"
                                 rows={4}
                                 name="description"
-                                value={
-                                    projectFormData.description
-                                }
-                                onChange={
-                                    handleProjectChange
-                                }
-                                placeholder="Describe your project..."
-                                disabled={
-                                    submittingProject
-                                }
+                                placeholder="Describe what this project is about..."
+                                value={formData.description}
+                                onChange={handleChange}
+                                disabled={saving}
                             />
-
                         </Form.Group>
 
-
-                        <Form.Group className="mb-3">
-
-                            <Form.Label>
-                                Status
-                            </Form.Label>
+                        <Form.Group>
+                            <Form.Label>Project Status</Form.Label>
 
                             <Form.Select
                                 name="status"
-                                value={
-                                    projectFormData.status
-                                }
-                                onChange={
-                                    handleProjectChange
-                                }
-                                disabled={
-                                    submittingProject
-                                }
+                                value={formData.status}
+                                onChange={handleChange}
+                                disabled={saving}
                             >
-
-                                <option value="ACTIVE">
+                                <option value={STATUS.ACTIVE}>
                                     Active
                                 </option>
 
-                                <option value="COMPLETED">
+                                <option value={STATUS.COMPLETED}>
                                     Completed
                                 </option>
 
-                                <option value="ON_HOLD">
+                                <option value={STATUS.ON_HOLD}>
                                     On Hold
                                 </option>
-
                             </Form.Select>
-
                         </Form.Group>
-
                     </Modal.Body>
 
-
                     <Modal.Footer>
-
                         <Button
-                            variant="secondary"
-                            onClick={
-                                handleCloseProjectModal
-                            }
-                            disabled={
-                                submittingProject
-                            }
+                            type="button"
+                            variant="light"
+                            onClick={handleCloseModal}
+                            disabled={saving}
                         >
                             Cancel
                         </Button>
 
-
                         <Button
-                            variant="primary"
                             type="submit"
-                            disabled={
-                                submittingProject
-                            }
+                            className="modal-save-btn"
+                            disabled={saving}
                         >
-
-                            {submittingProject ? (
-
+                            {saving ? (
                                 <>
                                     <Spinner
                                         size="sm"
                                         animation="border"
                                         className="me-2"
                                     />
-
                                     Saving...
                                 </>
-
+                            ) : editingProject ? (
+                                "Update Project"
                             ) : (
-
-                                editingProject
-                                    ? "Update Project"
-                                    : "Create Project"
-
+                                "Create Project"
                             )}
-
                         </Button>
-
                     </Modal.Footer>
-
                 </Form>
-
             </Modal>
-
-            <Modal
-                show={showMilestoneModal}
-                onHide={
-                    handleCloseMilestoneModal
-                }
-                centered
-            >
-
-                <Modal.Header closeButton>
-
-                    <Modal.Title className="fw-bold">
-
-                        {editingMilestone
-                            ? "Edit Milestone"
-                            : "Add Milestone"}
-
-                    </Modal.Title>
-
-                </Modal.Header>
-
-
-                <Form onSubmit={handleMilestoneSubmit}>
-
-                    <Modal.Body>
-
-                        {selectedProject && (
-
-                            <div className="bg-light rounded p-3 mb-3">
-
-                                <small className="text-muted">
-                                    Project
-                                </small>
-
-                                <div className="fw-bold">
-                                    {selectedProject.title}
-                                </div>
-
-                            </div>
-
-                        )}
-
-
-                        <Form.Group className="mb-3">
-
-                            <Form.Label>
-                                Milestone Title
-                            </Form.Label>
-
-                            <Form.Control
-                                type="text"
-                                name="title"
-                                value={
-                                    milestoneFormData.title
-                                }
-                                onChange={
-                                    handleMilestoneChange
-                                }
-                                placeholder="e.g. Implement JWT Authentication"
-                                minLength={2}
-                                maxLength={150}
-                                required
-                                disabled={
-                                    submittingMilestone
-                                }
-                            />
-
-                        </Form.Group>
-
-
-                        <Form.Group className="mb-3">
-
-                            <Form.Label>
-                                Status
-                            </Form.Label>
-
-                            <Form.Select
-                                name="status"
-                                value={
-                                    milestoneFormData.status
-                                }
-                                onChange={
-                                    handleMilestoneChange
-                                }
-                                disabled={
-                                    submittingMilestone
-                                }
-                            >
-
-                                <option value="PENDING">
-                                    Pending
-                                </option>
-
-                                <option value="IN_PROGRESS">
-                                    In Progress
-                                </option>
-
-                                <option value="DONE">
-                                    Done
-                                </option>
-
-                            </Form.Select>
-
-                        </Form.Group>
-
-
-                        <Form.Group className="mb-3">
-
-                            <Form.Label>
-                                Due Date
-                            </Form.Label>
-
-                            <Form.Control
-                                type="date"
-                                name="dueDate"
-                                value={
-                                    milestoneFormData.dueDate
-                                }
-                                onChange={
-                                    handleMilestoneChange
-                                }
-                                disabled={
-                                    submittingMilestone
-                                }
-                            />
-
-                        </Form.Group>
-
-                    </Modal.Body>
-
-
-                    <Modal.Footer>
-
-                        <Button
-                            variant="secondary"
-                            onClick={
-                                handleCloseMilestoneModal
-                            }
-                            disabled={
-                                submittingMilestone
-                            }
-                        >
-                            Cancel
-                        </Button>
-
-
-                        <Button
-                            variant="primary"
-                            type="submit"
-                            disabled={
-                                submittingMilestone
-                            }
-                        >
-
-                            {submittingMilestone ? (
-
-                                <>
-                                    <Spinner
-                                        size="sm"
-                                        animation="border"
-                                        className="me-2"
-                                    />
-
-                                    Saving...
-                                </>
-
-                            ) : (
-
-                                editingMilestone
-                                    ? "Update Milestone"
-                                    : "Create Milestone"
-
-                            )}
-
-                        </Button>
-
-                    </Modal.Footer>
-
-                </Form>
-
-            </Modal>
-
         </>
     );
 }
-
 
 export default Projects;

@@ -1,5 +1,6 @@
 import {Alert,Badge,Button,Card,Col,Container,Form,Modal,Row,Table,} from "react-bootstrap";
-import {FaCalendarAlt,FaClock,FaPlus,FaBook,FaHistory,FaEdit,FaTrash,} from "react-icons/fa";
+
+import {FaCalendarAlt,FaClock,FaPlus,FaBook,FaHistory,FaEdit,FaTrash,FaSearch,FaLayerGroup,} from "react-icons/fa";
 
 import {useCallback,useEffect,useMemo,useState,} from "react";
 
@@ -12,8 +13,11 @@ import skillService from "../services/skillService";
 
 import { useAuth } from "../context/AuthContext";
 
+import "./DailyLogs.css";
+
 
 const formatDate = (date) => {
+
     if (!date) {
         return "No date";
     }
@@ -36,10 +40,11 @@ const formatDate = (date) => {
 
 
 const formatHours = (hours) => {
+
     const numericHours = Number(hours);
 
     if (Number.isNaN(numericHours)) {
-        return "0";
+        return "0.0";
     }
 
     return numericHours.toFixed(1);
@@ -47,11 +52,17 @@ const formatHours = (hours) => {
 
 
 const getTodayDate = () => {
+
     const today = new Date();
 
     const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
+    const month = String(
+        today.getMonth() + 1
+    ).padStart(2, "0");
+
+    const day = String(
+        today.getDate()
+    ).padStart(2, "0");
 
     return `${year}-${month}-${day}`;
 };
@@ -67,17 +78,30 @@ const DailyLogs = () => {
 
     const [loading, setLoading] = useState(true);
 
-    const [skillsLoading, setSkillsLoading] = useState(false);
+    const [skillsLoading, setSkillsLoading] =
+        useState(false);
 
     const [error, setError] = useState("");
 
     const [success, setSuccess] = useState("");
 
-    const [showModal, setShowModal] = useState(false);
+    const [showModal, setShowModal] =
+        useState(false);
 
     const [saving, setSaving] = useState(false);
 
-    const [editingLogId, setEditingLogId] = useState(null);
+    const [editingLogId, setEditingLogId] =
+        useState(null);
+
+    const [searchTerm, setSearchTerm] =
+        useState("");
+
+    const [selectedSkill, setSelectedSkill] =
+        useState("all");
+
+    const [selectedDate, setSelectedDate] =
+        useState("");
+
 
     const [formData, setFormData] = useState({
         skillId: "",
@@ -87,14 +111,19 @@ const DailyLogs = () => {
         logDate: getTodayDate(),
     });
 
-
     const fetchDailyLogs = useCallback(
         async () => {
 
             if (!auth?.userId) {
+
                 setLogs([]);
-                setError("Unable to identify the logged-in user.");
+
+                setError(
+                    "Unable to identify the logged-in user."
+                );
+
                 setLoading(false);
+
                 return;
             }
 
@@ -103,20 +132,10 @@ const DailyLogs = () => {
 
             try {
 
-                console.log(
-                    "DAILY LOGS USER ID:",
-                    auth.userId
-                );
-
                 const data =
                     await dailyLogService.getDailyLogs(
                         auth.userId
                     );
-
-                console.log(
-                    "DAILY LOGS API RESPONSE:",
-                    data
-                );
 
                 setLogs(
                     Array.isArray(data)
@@ -129,11 +148,6 @@ const DailyLogs = () => {
                 console.error(
                     "Failed to fetch daily logs:",
                     err
-                );
-
-                console.error(
-                    "Daily Logs API response:",
-                    err.response?.data
                 );
 
                 setLogs([]);
@@ -153,13 +167,13 @@ const DailyLogs = () => {
         },
         [auth?.userId]
     );
-
-
     const fetchSkills = useCallback(
         async () => {
 
             if (!auth?.userId) {
+
                 setSkills([]);
+
                 return;
             }
 
@@ -171,11 +185,6 @@ const DailyLogs = () => {
                     await skillService.getSkills(
                         auth.userId
                     );
-
-                console.log(
-                    "SKILLS API RESPONSE:",
-                    data
-                );
 
                 setSkills(
                     Array.isArray(data)
@@ -190,11 +199,6 @@ const DailyLogs = () => {
                     err
                 );
 
-                console.error(
-                    "Skills API response:",
-                    err.response?.data
-                );
-
                 setSkills([]);
 
             } finally {
@@ -206,13 +210,13 @@ const DailyLogs = () => {
         },
         [auth?.userId]
     );
-
-
     useEffect(() => {
 
         if (auth?.userId) {
+
             fetchDailyLogs();
             fetchSkills();
+
         }
 
     }, [
@@ -228,35 +232,90 @@ const DailyLogs = () => {
 
         const totalHours = logs.reduce(
             (total, log) => {
-                return total + Number(log.hours || 0);
+
+                return total +
+                    Number(log.hours || 0);
+
             },
             0
         );
 
-        const uniqueSkills = new Set(
-            logs
-                .filter((log) => log.skillId)
-                .map((log) => log.skillId)
-        ).size;
+
+        const uniqueSkills =
+            new Set(
+                logs
+                    .filter(
+                        (log) => log.skillId
+                    )
+                    .map(
+                        (log) => log.skillId
+                    )
+            ).size;
+
+
+        const averageHours =
+            totalLogs > 0
+                ? totalHours / totalLogs
+                : 0;
+
 
         return {
             totalLogs,
             totalHours,
             uniqueSkills,
+            averageHours,
         };
 
     }, [logs]);
 
+    const filteredLogs = useMemo(() => {
 
-    const clearError = () => {
-        setError("");
-    };
+        return logs.filter((log) => {
+
+            const matchesSearch =
+                !searchTerm ||
+                log.topic
+                    ?.toLowerCase()
+                    .includes(
+                        searchTerm.toLowerCase()
+                    ) ||
+                log.notes
+                    ?.toLowerCase()
+                    .includes(
+                        searchTerm.toLowerCase()
+                    ) ||
+                log.skillName
+                    ?.toLowerCase()
+                    .includes(
+                        searchTerm.toLowerCase()
+                    );
 
 
-    const clearSuccess = () => {
-        setSuccess("");
-    };
+            const matchesSkill =
+                selectedSkill === "all" ||
+                String(log.skillId) ===
+                    String(selectedSkill);
 
+
+            const matchesDate =
+                !selectedDate ||
+                log.logDate === selectedDate;
+
+
+            return (
+                matchesSearch &&
+                matchesSkill &&
+                matchesDate
+            );
+
+        });
+
+    }, [
+        logs,
+        searchTerm,
+        selectedSkill,
+        selectedDate,
+    ]);
 
     const resetForm = () => {
 
@@ -283,7 +342,9 @@ const DailyLogs = () => {
         setShowModal(true);
 
         if (skills.length === 0) {
+
             fetchSkills();
+
         }
 
     };
@@ -296,6 +357,7 @@ const DailyLogs = () => {
         }
 
         setShowModal(false);
+
         resetForm();
 
     };
@@ -308,13 +370,16 @@ const DailyLogs = () => {
             value,
         } = event.target;
 
+
         setFormData((previous) => ({
+
             ...previous,
+
             [name]: value,
+
         }));
 
     };
-
 
     const handleEdit = (log) => {
 
@@ -324,48 +389,72 @@ const DailyLogs = () => {
         setEditingLogId(log.id);
 
         setFormData({
+
             skillId: log.skillId
                 ? String(log.skillId)
                 : "",
+
             topic: log.topic || "",
+
             hours: log.hours ?? "",
+
             notes: log.notes || "",
-            logDate: log.logDate || getTodayDate(),
+
+            logDate:
+                log.logDate ||
+                getTodayDate(),
+
         });
 
         setShowModal(true);
 
         if (skills.length === 0) {
+
             fetchSkills();
+
         }
 
     };
-
 
     const handleSubmit = async (event) => {
 
         event.preventDefault();
 
+
         if (!auth?.userId) {
+
             setError(
                 "Unable to identify the logged-in user."
             );
+
             return;
+
         }
 
+
         setSaving(true);
+
         setError("");
+
         setSuccess("");
 
+
         const payload = {
+
             skillId: formData.skillId
                 ? Number(formData.skillId)
                 : null,
+
             topic: formData.topic.trim(),
+
             hours: Number(formData.hours),
+
             notes: formData.notes.trim(),
+
             logDate: formData.logDate,
+
         };
+
 
         try {
 
@@ -394,21 +483,19 @@ const DailyLogs = () => {
 
             }
 
+
             setShowModal(false);
+
             resetForm();
 
             await fetchDailyLogs();
+
 
         } catch (err) {
 
             console.error(
                 "Failed to save daily log:",
                 err
-            );
-
-            console.error(
-                "Save daily log response:",
-                err.response?.data
             );
 
             setError(
@@ -425,27 +512,33 @@ const DailyLogs = () => {
 
     };
 
-
     const handleDelete = async (logId) => {
 
         if (!auth?.userId) {
+
             setError(
                 "Unable to identify the logged-in user."
             );
+
             return;
+
         }
+
 
         const confirmed =
             window.confirm(
                 "Are you sure you want to delete this daily log?"
             );
 
+
         if (!confirmed) {
             return;
         }
 
+
         setError("");
         setSuccess("");
+
 
         try {
 
@@ -454,22 +547,20 @@ const DailyLogs = () => {
                 logId
             );
 
+
             setSuccess(
                 "Daily log deleted successfully."
             );
 
+
             await fetchDailyLogs();
+
 
         } catch (err) {
 
             console.error(
                 "Failed to delete daily log:",
                 err
-            );
-
-            console.error(
-                "Delete daily log response:",
-                err.response?.data
             );
 
             setError(
@@ -485,87 +576,77 @@ const DailyLogs = () => {
 
     return (
         <>
+
             <AppNavbar />
 
-            <main>
+
+            <main className="daily-logs-page">
 
                 <Container
-                    className="py-4 py-lg-5"
+                    fluid
+                    className="daily-logs-container"
                 >
 
-                    <div
-                        className="
-                            d-flex
-                            flex-column
-                            flex-md-row
-                            justify-content-between
-                            align-items-md-center
-                            gap-3
-                            mb-4
-                        "
-                    >
+
+                    {/* =====================================================
+                        PAGE HEADER
+                    ===================================================== */}
+
+                    <div className="daily-logs-header">
 
                         <div>
 
-                            <div
-                                className="
-                                    d-flex
-                                    align-items-center
-                                    gap-2
-                                    mb-1
-                                "
-                            >
+                            <div className="page-title-row">
 
-                                <FaHistory
-                                    className="text-primary"
-                                />
+                                <div className="page-icon">
 
-                                <h1
-                                    className="
-                                        fw-bold
-                                        mb-0
-                                    "
-                                >
-                                    Daily Logs
-                                </h1>
+                                    <FaHistory />
+
+                                </div>
+
+
+                                <div>
+
+                                    <h1>
+                                        Daily Logs
+                                    </h1>
+
+                                    <p>
+                                        Track your learning,
+                                        practice, and development
+                                        progress.
+                                    </p>
+
+                                </div>
 
                             </div>
 
-                            <p
-                                className="
-                                    text-muted
-                                    mb-0
-                                "
-                            >
-                                Track your daily learning,
-                                development activities,
-                                and focused hours.
-                            </p>
-
                         </div>
 
+
                         <Button
-                            variant="primary"
-                            onClick={handleOpenCreate}
+                            className="add-log-button"
+                            onClick={
+                                handleOpenCreate
+                            }
                         >
 
-                            <FaPlus
-                                className="me-2"
-                            />
+                            <FaPlus />
 
                             Add Daily Log
 
                         </Button>
 
                     </div>
-
-
                     {error && (
 
                         <Alert
                             variant="danger"
                             dismissible
-                            onClose={clearError}
+                            onClose={() =>
+                                setError("")
+                            }
+                            className="modern-alert"
                         >
                             {error}
                         </Alert>
@@ -578,76 +659,56 @@ const DailyLogs = () => {
                         <Alert
                             variant="success"
                             dismissible
-                            onClose={clearSuccess}
+                            onClose={() =>
+                                setSuccess("")
+                            }
+                            className="modern-alert"
                         >
                             {success}
                         </Alert>
 
                     )}
 
-
                     {!loading && (
 
-                        <Row
-                            className="g-3 mb-4"
-                        >
+                        <Row className="g-4 mb-4">
+
 
                             <Col
                                 xs={12}
-                                sm={6}
-                                lg={4}
+                                md={6}
+                                xl={3}
                             >
 
-                                <Card
-                                    className="
-                                        border-0
-                                        shadow-sm
-                                        h-100
-                                    "
-                                >
+                                <Card className="stat-card">
 
                                     <Card.Body>
 
-                                        <div
-                                            className="
-                                                d-flex
-                                                justify-content-between
-                                                align-items-center
-                                            "
-                                        >
+                                        <div className="stat-card-content">
 
                                             <div>
 
-                                                <div
-                                                    className="
-                                                        text-muted
-                                                        small
-                                                        mb-2
-                                                    "
-                                                >
-                                                    Total Logs
-                                                </div>
+                                                <span className="stat-label">
+                                                    Learning Entries
+                                                </span>
 
-                                                <div
-                                                    className="
-                                                        fs-2
-                                                        fw-bold
-                                                    "
-                                                >
+                                                <h2>
                                                     {
                                                         statistics.totalLogs
                                                     }
-                                                </div>
+                                                </h2>
+
+                                                <span className="stat-description">
+                                                    Total activities
+                                                </span>
 
                                             </div>
 
-                                            <div
-                                                className="
-                                                    text-primary
-                                                    fs-3
-                                                "
-                                            >
+
+                                            <div className="stat-icon blue">
+
                                                 <FaHistory />
+
                                             </div>
 
                                         </div>
@@ -661,75 +722,41 @@ const DailyLogs = () => {
 
                             <Col
                                 xs={12}
-                                sm={6}
-                                lg={4}
+                                md={6}
+                                xl={3}
                             >
 
-                                <Card
-                                    className="
-                                        border-0
-                                        shadow-sm
-                                        h-100
-                                    "
-                                >
+                                <Card className="stat-card">
 
                                     <Card.Body>
 
-                                        <div
-                                            className="
-                                                d-flex
-                                                justify-content-between
-                                                align-items-center
-                                            "
-                                        >
+                                        <div className="stat-card-content">
 
                                             <div>
 
-                                                <div
-                                                    className="
-                                                        text-muted
-                                                        small
-                                                        mb-2
-                                                    "
-                                                >
-                                                    Total Hours
-                                                </div>
+                                                <span className="stat-label">
+                                                    Hours Logged
+                                                </span>
 
-                                                <div
-                                                    className="
-                                                        fs-2
-                                                        fw-bold
-                                                    "
-                                                >
-
+                                                <h2>
                                                     {
                                                         formatHours(
                                                             statistics.totalHours
                                                         )
                                                     }
+                                                </h2>
 
-                                                    <span
-                                                        className="
-                                                            fs-6
-                                                            fw-normal
-                                                            text-muted
-                                                            ms-1
-                                                        "
-                                                    >
-                                                        hrs
-                                                    </span>
-
-                                                </div>
+                                                <span className="stat-description">
+                                                    Focused learning time
+                                                </span>
 
                                             </div>
 
-                                            <div
-                                                className="
-                                                    text-success
-                                                    fs-3
-                                                "
-                                            >
+
+                                            <div className="stat-icon green">
+
                                                 <FaClock />
+
                                             </div>
 
                                         </div>
@@ -743,60 +770,87 @@ const DailyLogs = () => {
 
                             <Col
                                 xs={12}
-                                sm={12}
-                                lg={4}
+                                md={6}
+                                xl={3}
                             >
 
-                                <Card
-                                    className="
-                                        border-0
-                                        shadow-sm
-                                        h-100
-                                    "
-                                >
+                                <Card className="stat-card">
 
                                     <Card.Body>
 
-                                        <div
-                                            className="
-                                                d-flex
-                                                justify-content-between
-                                                align-items-center
-                                            "
-                                        >
+                                        <div className="stat-card-content">
 
                                             <div>
 
-                                                <div
-                                                    className="
-                                                        text-muted
-                                                        small
-                                                        mb-2
-                                                    "
-                                                >
-                                                    Skills Used
-                                                </div>
+                                                <span className="stat-label">
+                                                    Skills Practiced
+                                                </span>
 
-                                                <div
-                                                    className="
-                                                        fs-2
-                                                        fw-bold
-                                                    "
-                                                >
+                                                <h2>
                                                     {
                                                         statistics.uniqueSkills
                                                     }
-                                                </div>
+                                                </h2>
+
+                                                <span className="stat-description">
+                                                    Different skills
+                                                </span>
 
                                             </div>
 
-                                            <div
-                                                className="
-                                                    text-info
-                                                    fs-3
-                                                "
-                                            >
+
+                                            <div className="stat-icon purple">
+
                                                 <FaBook />
+
+                                            </div>
+
+                                        </div>
+
+                                    </Card.Body>
+
+                                </Card>
+
+                            </Col>
+
+
+                            <Col
+                                xs={12}
+                                md={6}
+                                xl={3}
+                            >
+
+                                <Card className="stat-card">
+
+                                    <Card.Body>
+
+                                        <div className="stat-card-content">
+
+                                            <div>
+
+                                                <span className="stat-label">
+                                                    Average Session
+                                                </span>
+
+                                                <h2>
+                                                    {
+                                                        formatHours(
+                                                            statistics.averageHours
+                                                        )
+                                                    }
+                                                </h2>
+
+                                                <span className="stat-description">
+                                                    Hours per entry
+                                                </span>
+
+                                            </div>
+
+
+                                            <div className="stat-icon orange">
+
+                                                <FaLayerGroup />
+
                                             </div>
 
                                         </div>
@@ -812,140 +866,235 @@ const DailyLogs = () => {
                     )}
 
 
-                    <Card
-                        className="
-                            border-0
-                            shadow-sm
-                        "
-                    >
+                    {/* =====================================================
+                        MAIN ACTIVITY CARD
+                    ===================================================== */}
 
-                        <Card.Body
-                            className="p-0"
-                        >
+                    <Card className="activity-card">
 
-                            <div
-                                className="
-                                    p-4
-                                    border-bottom
-                                    d-flex
-                                    flex-column
-                                    flex-md-row
-                                    justify-content-between
-                                    align-items-md-center
-                                    gap-2
-                                "
-                            >
+                        <Card.Body className="p-0">
+
+
+                            {/* HEADER */}
+
+                            <div className="activity-header">
 
                                 <div>
 
-                                    <h5
-                                        className="
-                                            fw-semibold
-                                            mb-1
-                                        "
-                                    >
+                                    <h4>
                                         Learning Activity
-                                    </h5>
+                                    </h4>
 
-                                    <small
-                                        className="text-muted"
-                                    >
-                                        Your recent development
-                                        and learning logs.
-                                    </small>
+                                    <p>
+                                        Review and manage your
+                                        recent development activity.
+                                    </p>
 
                                 </div>
 
-                                <Badge
-                                    bg="light"
-                                    text="dark"
-                                    className="
-                                        border
-                                        px-3
-                                        py-2
-                                    "
-                                >
-                                    {logs.length}{" "}
+
+                                <Badge className="entry-badge">
+
                                     {
-                                        logs.length === 1
+                                        filteredLogs.length
+                                    }
+
+                                    {" "}
+
+                                    {
+                                        filteredLogs.length === 1
                                             ? "Entry"
                                             : "Entries"
                                     }
+
                                 </Badge>
 
                             </div>
 
 
-                            {loading ? (
+                            {/* FILTERS */}
 
-                                <div className="px-4">
+                            <div className="filter-section">
 
-                                    <LoadingState
-                                        message="Loading your daily activity..."
-                                    />
+                                <div className="search-wrapper">
 
-                                </div>
+                                    <FaSearch />
 
-                            ) : logs.length === 0 ? (
-
-                                <div className="p-4">
-
-                                    <EmptyState
-                                        title="No daily logs yet"
-                                        message="Start tracking your development activities by adding your first daily log."
-                                        action={
-                                            <Button
-                                                variant="primary"
-                                                onClick={
-                                                    handleOpenCreate
-                                                }
-                                            >
-
-                                                <FaPlus
-                                                    className="me-2"
-                                                />
-
-                                                Add Your First Log
-
-                                            </Button>
+                                    <Form.Control
+                                        type="text"
+                                        placeholder="Search topic, skill or notes..."
+                                        value={
+                                            searchTerm
+                                        }
+                                        onChange={(e) =>
+                                            setSearchTerm(
+                                                e.target.value
+                                            )
                                         }
                                     />
 
                                 </div>
 
+
+                                <Form.Select
+                                    className="filter-control"
+                                    value={
+                                        selectedSkill
+                                    }
+                                    onChange={(e) =>
+                                        setSelectedSkill(
+                                            e.target.value
+                                        )
+                                    }
+                                >
+
+                                    <option value="all">
+                                        All Skills
+                                    </option>
+
+                                    {skills.map(
+                                        (skill) => (
+
+                                            <option
+                                                key={
+                                                    skill.id
+                                                }
+                                                value={
+                                                    skill.id
+                                                }
+                                            >
+                                                {
+                                                    skill.name
+                                                }
+                                            </option>
+
+                                        )
+                                    )}
+
+                                </Form.Select>
+
+
+                                <Form.Control
+                                    type="date"
+                                    className="filter-control date-filter"
+                                    value={
+                                        selectedDate
+                                    }
+                                    onChange={(e) =>
+                                        setSelectedDate(
+                                            e.target.value
+                                        )
+                                    }
+                                />
+
+
+                                {(searchTerm ||
+                                    selectedSkill !==
+                                        "all" ||
+                                    selectedDate) && (
+
+                                    <Button
+                                        variant="light"
+                                        className="clear-filter-button"
+                                        onClick={() => {
+
+                                            setSearchTerm("");
+                                            setSelectedSkill(
+                                                "all"
+                                            );
+                                            setSelectedDate("");
+
+                                        }}
+                                    >
+                                        Clear
+                                    </Button>
+
+                                )}
+
+                            </div>
+
+
+                            {/* TABLE */}
+
+                            {loading ? (
+
+                                <div className="loading-wrapper">
+
+                                    <LoadingState
+                                        message="Loading your learning activity..."
+                                    />
+
+                                </div>
+
+                            ) : filteredLogs.length === 0 ? (
+
+                                <div className="empty-wrapper">
+
+                                    {logs.length === 0 ? (
+
+                                        <EmptyState
+                                            title="No daily logs yet"
+                                            message="Start tracking your development activities by adding your first learning log."
+                                            action={
+                                                <Button
+                                                    className="add-log-button"
+                                                    onClick={
+                                                        handleOpenCreate
+                                                    }
+                                                >
+
+                                                    <FaPlus />
+
+                                                    Add Your First Log
+
+                                                </Button>
+                                            }
+                                        />
+
+                                    ) : (
+
+                                        <div className="no-results">
+
+                                            <div className="no-results-icon">
+
+                                                <FaSearch />
+
+                                            </div>
+
+                                            <h5>
+                                                No matching logs
+                                            </h5>
+
+                                            <p>
+                                                Try changing your
+                                                search or filters.
+                                            </p>
+
+                                        </div>
+
+                                    )}
+
+                                </div>
+
                             ) : (
 
-                                <div
-                                    className="
-                                        table-responsive
-                                    "
-                                >
+                                <div className="table-container">
 
                                     <Table
                                         hover
-                                        responsive
-                                        className="
-                                            align-middle
-                                            mb-0
-                                        "
+                                        className="modern-table"
                                     >
 
-                                        <thead
-                                            className="
-                                                table-light
-                                            "
-                                        >
+                                        <thead>
 
                                             <tr>
 
-                                                <th
-                                                    className="ps-4"
-                                                >
+                                                <th>
                                                     Date
                                                 </th>
 
                                                 <th>
-                                                    Topic
+                                                    Learning Topic
                                                 </th>
 
                                                 <th>
@@ -953,19 +1102,14 @@ const DailyLogs = () => {
                                                 </th>
 
                                                 <th>
-                                                    Hours
+                                                    Time
                                                 </th>
 
                                                 <th>
                                                     Notes
                                                 </th>
 
-                                                <th
-                                                    className="
-                                                        text-end
-                                                        pe-4
-                                                    "
-                                                >
+                                                <th className="text-end">
                                                     Actions
                                                 </th>
 
@@ -976,7 +1120,7 @@ const DailyLogs = () => {
 
                                         <tbody>
 
-                                            {logs.map(
+                                            {filteredLogs.map(
                                                 (log) => (
 
                                                     <tr
@@ -985,93 +1129,72 @@ const DailyLogs = () => {
                                                         }
                                                     >
 
-                                                        <td
-                                                            className="
-                                                                ps-4
-                                                                text-nowrap
-                                                            "
-                                                        >
 
-                                                            <div
-                                                                className="
-                                                                    d-flex
-                                                                    align-items-center
-                                                                    gap-2
-                                                                "
-                                                            >
-
-                                                                <FaCalendarAlt
-                                                                    className="
-                                                                        text-muted
-                                                                    "
-                                                                />
-
-                                                                <span
-                                                                    className="
-                                                                        fw-medium
-                                                                    "
-                                                                >
-                                                                    {
-                                                                        formatDate(
-                                                                            log.logDate
-                                                                        )
-                                                                    }
-                                                                </span>
-
-                                                            </div>
-
-                                                        </td>
-
+                                                        {/* DATE */}
 
                                                         <td>
 
-                                                            <div
-                                                                className="
-                                                                    fw-semibold
-                                                                "
-                                                            >
-                                                                {
-                                                                    log.topic
-                                                                }
-                                                            </div>
+                                                            <div className="date-cell">
 
-                                                            <small
-                                                                className="
-                                                                    text-muted
-                                                                "
-                                                            >
-                                                                Log #
-                                                                {
-                                                                    log.id
-                                                                }
-                                                            </small>
+                                                                <div className="date-icon">
+
+                                                                    <FaCalendarAlt />
+
+                                                                </div>
+
+                                                                <div>
+
+                                                                    <strong>
+                                                                        {
+                                                                            formatDate(
+                                                                                log.logDate
+                                                                            )
+                                                                        }
+                                                                    </strong>
+
+                                                                </div>
+
+                                                            </div>
 
                                                         </td>
 
+
+                                                        {/* TOPIC */}
+
+                                                        <td>
+
+                                                            <div className="topic-cell">
+
+                                                                <strong>
+                                                                    {
+                                                                        log.topic
+                                                                    }
+                                                                </strong>
+
+                                                            </div>
+
+                                                        </td>
+
+
+                                                        {/* SKILL */}
 
                                                         <td>
 
                                                             {log.skillName ? (
 
-                                                                <Badge
-                                                                    bg="primary-subtle"
-                                                                    text="primary"
-                                                                    className="
-                                                                        border
-                                                                    "
-                                                                >
+                                                                <span className="skill-pill">
+
+                                                                    <FaBook />
+
                                                                     {
                                                                         log.skillName
                                                                     }
-                                                                </Badge>
+
+                                                                </span>
 
                                                             ) : (
 
-                                                                <span
-                                                                    className="
-                                                                        text-muted
-                                                                    "
-                                                                >
+                                                                <span className="no-skill">
                                                                     No skill
                                                                 </span>
 
@@ -1080,116 +1203,90 @@ const DailyLogs = () => {
                                                         </td>
 
 
+                                                        {/* HOURS */}
+
                                                         <td>
 
-                                                            <span
-                                                                className="
-                                                                    fw-semibold
-                                                                    text-nowrap
-                                                                "
-                                                            >
+                                                            <div className="hours-cell">
 
-                                                                {
-                                                                    formatHours(
-                                                                        log.hours
-                                                                    )
-                                                                }
+                                                                <FaClock />
 
-                                                                <span
-                                                                    className="
-                                                                        text-muted
-                                                                        fw-normal
-                                                                        ms-1
-                                                                    "
-                                                                >
+                                                                <strong>
+                                                                    {
+                                                                        formatHours(
+                                                                            log.hours
+                                                                        )
+                                                                    }
+                                                                </strong>
+
+                                                                <span>
                                                                     hrs
                                                                 </span>
 
-                                                            </span>
+                                                            </div>
 
                                                         </td>
 
 
-                                                        <td
-                                                            style={{
-                                                                minWidth:
-                                                                    "220px",
-                                                                maxWidth:
-                                                                    "320px",
-                                                            }}
-                                                        >
+                                                        {/* NOTES */}
 
-                                                            <span
-                                                                className="
-                                                                    text-muted
-                                                                "
-                                                            >
+                                                        <td>
+
+                                                            <div className="notes-cell">
+
                                                                 {
                                                                     log.notes ||
-                                                                    "No notes"
+                                                                    "No notes added"
                                                                 }
-                                                            </span>
+
+                                                            </div>
 
                                                         </td>
 
 
-                                                        <td
-                                                            className="
-                                                                text-end
-                                                                pe-4
-                                                                text-nowrap
-                                                            "
-                                                        >
+                                                        {/* ACTIONS */}
 
-                                                            <Button
-                                                                variant="
-                                                                    outline-primary
-                                                                "
-                                                                size="sm"
-                                                                className="
-                                                                    me-2
-                                                                "
-                                                                onClick={() =>
-                                                                    handleEdit(
-                                                                        log
-                                                                    )
-                                                                }
-                                                            >
+                                                        <td>
 
-                                                                <FaEdit
-                                                                    className="
-                                                                        me-1
-                                                                    "
-                                                                />
+                                                            <div className="actions-cell">
 
-                                                                Edit
+                                                                <Button
+                                                                    variant="light"
+                                                                    className="edit-button"
+                                                                    onClick={() =>
+                                                                        handleEdit(
+                                                                            log
+                                                                        )
+                                                                    }
+                                                                >
 
-                                                            </Button>
+                                                                    <FaEdit />
+
+                                                                    Edit
+
+                                                                </Button>
 
 
-                                                            <Button
-                                                                variant="
-                                                                    outline-danger
-                                                                "
-                                                                size="sm"
-                                                                onClick={() =>
-                                                                    handleDelete(
-                                                                        log.id
-                                                                    )
-                                                                }
-                                                            >
+                                                                <Button
+                                                                    variant="light"
+                                                                    className="delete-button"
+                                                                    onClick={() =>
+                                                                        handleDelete(
+                                                                            log.id
+                                                                        )
+                                                                    }
+                                                                >
 
-                                                                <FaTrash
-                                                                    className="
-                                                                        me-1
-                                                                    "
-                                                                />
+                                                                    <FaTrash />
 
-                                                                Delete
+                                                                    Delete
 
-                                                            </Button>
+                                                                </Button>
+
+                                                            </div>
 
                                                         </td>
+
 
                                                     </tr>
 
@@ -1212,11 +1309,12 @@ const DailyLogs = () => {
 
             </main>
 
-
             <Modal
                 show={showModal}
                 onHide={handleCloseModal}
                 centered
+                size="lg"
+                className="daily-log-modal"
             >
 
                 <Form
@@ -1227,107 +1325,139 @@ const DailyLogs = () => {
                         closeButton={!saving}
                     >
 
-                        <Modal.Title>
+                        <div>
 
-                            {editingLogId
-                                ? "Edit Daily Log"
-                                : "Add Daily Log"}
+                            <Modal.Title>
 
-                        </Modal.Title>
+                                {editingLogId
+                                    ? "Edit Daily Log"
+                                    : "Add Daily Log"}
+
+                            </Modal.Title>
+
+                            <p className="modal-subtitle">
+
+                                {editingLogId
+                                    ? "Update your learning activity."
+                                    : "Record what you learned or practiced today."}
+
+                            </p>
+
+                        </div>
 
                     </Modal.Header>
 
 
                     <Modal.Body>
 
-                        <Form.Group
-                            className="mb-3"
-                        >
+                        <Row className="g-3">
 
-                            <Form.Label>
-                                Skill
-                            </Form.Label>
 
-                            <Form.Select
-                                name="skillId"
-                                value={formData.skillId}
-                                onChange={
-                                    handleInputChange
-                                }
-                                disabled={
-                                    skillsLoading ||
-                                    saving
-                                }
-                            >
+                            {/* SKILL */}
 
-                                <option value="">
-                                    Select a skill
-                                </option>
+                            <Col xs={12}>
 
-                                {skills.map(
-                                    (skill) => (
+                                <Form.Group>
 
-                                        <option
-                                            key={skill.id}
-                                            value={skill.id}
-                                        >
-                                            {
-                                                skill.name
-                                            }
+                                    <Form.Label>
+                                        Skill
+                                    </Form.Label>
+
+                                    <Form.Select
+                                        name="skillId"
+                                        value={
+                                            formData.skillId
+                                        }
+                                        onChange={
+                                            handleInputChange
+                                        }
+                                        disabled={
+                                            skillsLoading ||
+                                            saving
+                                        }
+                                    >
+
+                                        <option value="">
+                                            Select a skill
                                         </option>
 
-                                    )
-                                )}
+                                        {skills.map(
+                                            (skill) => (
 
-                            </Form.Select>
+                                                <option
+                                                    key={
+                                                        skill.id
+                                                    }
+                                                    value={
+                                                        skill.id
+                                                    }
+                                                >
+                                                    {
+                                                        skill.name
+                                                    }
+                                                </option>
 
-                            {skills.length === 0 &&
-                                !skillsLoading && (
+                                            )
+                                        )}
 
-                                    <Form.Text
-                                        className="text-muted"
-                                    >
-                                        No skills found. You
-                                        can still create a log
-                                        without selecting a
-                                        skill.
-                                    </Form.Text>
+                                    </Form.Select>
 
-                                )}
+                                    {skills.length === 0 &&
+                                        !skillsLoading && (
 
-                        </Form.Group>
+                                            <Form.Text
+                                                className="text-muted"
+                                            >
+                                                No skills found.
+                                                You can still
+                                                create a log
+                                                without a skill.
+                                            </Form.Text>
 
+                                        )}
 
-                        <Form.Group
-                            className="mb-3"
-                        >
+                                </Form.Group>
 
-                            <Form.Label>
-                                Topic
-                            </Form.Label>
-
-                            <Form.Control
-                                type="text"
-                                name="topic"
-                                value={formData.topic}
-                                onChange={
-                                    handleInputChange
-                                }
-                                placeholder="Enter what you worked on"
-                                required
-                                disabled={saving}
-                            />
-
-                        </Form.Group>
+                            </Col>
 
 
-                        <Row>
+                            {/* TOPIC */}
 
-                            <Col md={6}>
+                            <Col xs={12}>
 
-                                <Form.Group
-                                    className="mb-3"
-                                >
+                                <Form.Group>
+
+                                    <Form.Label>
+                                        Learning Topic
+                                    </Form.Label>
+
+                                    <Form.Control
+                                        type="text"
+                                        name="topic"
+                                        value={
+                                            formData.topic
+                                        }
+                                        onChange={
+                                            handleInputChange
+                                        }
+                                        placeholder="e.g. Spring Security authentication"
+                                        required
+                                        disabled={saving}
+                                    />
+
+                                </Form.Group>
+
+                            </Col>
+
+
+                            {/* HOURS */}
+
+                            <Col
+                                xs={12}
+                                md={6}
+                            >
+
+                                <Form.Group>
 
                                     <Form.Label>
                                         Hours
@@ -1336,7 +1466,9 @@ const DailyLogs = () => {
                                     <Form.Control
                                         type="number"
                                         name="hours"
-                                        value={formData.hours}
+                                        value={
+                                            formData.hours
+                                        }
                                         onChange={
                                             handleInputChange
                                         }
@@ -1352,14 +1484,17 @@ const DailyLogs = () => {
                             </Col>
 
 
-                            <Col md={6}>
+                            {/* DATE */}
 
-                                <Form.Group
-                                    className="mb-3"
-                                >
+                            <Col
+                                xs={12}
+                                md={6}
+                            >
+
+                                <Form.Group>
 
                                     <Form.Label>
-                                        Log Date
+                                        Date
                                     </Form.Label>
 
                                     <Form.Control
@@ -1379,30 +1514,36 @@ const DailyLogs = () => {
 
                             </Col>
 
+
+                            {/* NOTES */}
+
+                            <Col xs={12}>
+
+                                <Form.Group>
+
+                                    <Form.Label>
+                                        Notes
+                                    </Form.Label>
+
+                                    <Form.Control
+                                        as="textarea"
+                                        rows={5}
+                                        name="notes"
+                                        value={
+                                            formData.notes
+                                        }
+                                        onChange={
+                                            handleInputChange
+                                        }
+                                        placeholder="What did you learn? What did you build or practice?"
+                                        disabled={saving}
+                                    />
+
+                                </Form.Group>
+
+                            </Col>
+
                         </Row>
-
-
-                        <Form.Group
-                            className="mb-2"
-                        >
-
-                            <Form.Label>
-                                Notes
-                            </Form.Label>
-
-                            <Form.Control
-                                as="textarea"
-                                rows={4}
-                                name="notes"
-                                value={formData.notes}
-                                onChange={
-                                    handleInputChange
-                                }
-                                placeholder="Add notes about your work"
-                                disabled={saving}
-                            />
-
-                        </Form.Group>
 
                     </Modal.Body>
 
@@ -1410,15 +1551,19 @@ const DailyLogs = () => {
                     <Modal.Footer>
 
                         <Button
-                            variant="secondary"
-                            onClick={handleCloseModal}
+                            variant="light"
+                            className="modal-cancel"
+                            onClick={
+                                handleCloseModal
+                            }
                             disabled={saving}
                         >
                             Cancel
                         </Button>
 
+
                         <Button
-                            variant="primary"
+                            className="modal-save"
                             type="submit"
                             disabled={saving}
                         >

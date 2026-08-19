@@ -1,0 +1,222 @@
+.devtrack-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    width: 100%;
+    min-height: 72px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom: 1px solid rgba(30, 41, 59, 0.08);
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.045);
+    transition: box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.devtrack-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    margin-right: 28px;
+    transition: transform 0.2s ease;
+}
+
+.devtrack-brand:hover {
+    transform: translateY(-1px);
+}
+
+.brand-icon {
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: linear-gradient( 135deg, #0d6efd, #6f42c1);
+    color: #ffffff;
+    font-size: 0.95rem;
+    box-shadow: 0 6px 16px rgba(13, 110, 253, 0.22);
+}
+
+.brand-text {
+    color: #172033;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+.brand-text span {
+    color: #0d6efd;
+}
+
+.devtrack-nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.devtrack-nav-link {
+    position: relative;
+    display: flex !important;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 12px !important;
+    border-radius: 10px;
+    color: #687386 !important;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.devtrack-nav-link:hover {
+    color: #172033 !important;
+    background: #f5f7fb;
+    transform: translateY(-1px);
+}
+
+.devtrack-nav-link.active {
+    color: #0d6efd !important;
+    background: rgba(13, 110, 253, 0.08);
+}
+
+.devtrack-nav-link.active::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: -17px;
+    height: 2px;
+    border-radius: 10px;
+    background: linear-gradient( 90deg, #0d6efd, #6f42c1);
+}
+
+.nav-item-icon {
+    font-size: 0.78rem;
+    flex-shrink: 0;
+}
+
+.devtrack-user-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.devtrack-user {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.devtrack-avatar {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: linear-gradient( 135deg, #e9f2ff, #f0e8ff);
+    color: #3157a6;
+    font-size: 0.85rem;
+    font-weight: 800;
+}
+
+.devtrack-user-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.15;
+}
+
+.devtrack-user-label {
+    color: #9aa3b2;
+    font-size: 0.65rem;
+    font-weight: 500;
+}
+
+.devtrack-user-name {
+    color: #273247;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.devtrack-logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border-radius: 9px !important;
+    padding: 7px 11px !important;
+    font-size: 0.76rem;
+    font-weight: 600;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.devtrack-logout:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(220, 53, 69, 0.15);
+}
+
+.devtrack-navbar-toggle {
+    border: none !important;
+    padding: 7px !important;
+    box-shadow: none !important;
+    border-radius: 10px;
+}
+
+.devtrack-navbar-toggle:focus {
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.12) !important;
+}
+
+@media (max-width: 991px) {
+    .devtrack-navbar {
+        min-height: 66px;
+    }
+    .devtrack-brand {
+        margin-right: 0;
+    }
+    .devtrack-nav {
+        align-items: stretch;
+        gap: 3px;
+        padding-top: 12px;
+        padding-bottom: 8px;
+    }
+    .devtrack-nav-link {
+        padding: 10px 12px !important;
+    }
+    .devtrack-nav-link.active::after {
+        display: none;
+    }
+    .devtrack-user-section {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 10px;
+        padding-top: 10px;
+        padding-bottom: 14px;
+        border-top: 1px solid #edf0f5;
+    }
+    .devtrack-user {
+        padding: 5px 2px;
+    }
+    .devtrack-logout {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 575px) {
+    .devtrack-navbar {
+        min-height: 62px;
+    }
+    .brand-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+    }
+    .brand-text {
+        font-size: 1.1rem;
+    }
+    .devtrack-user-info {
+        display: none;
+    }
+    .devtrack-user {
+        justify-content: space-between;
+    }
+}

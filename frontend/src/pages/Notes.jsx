@@ -14,10 +14,14 @@ import {
 import {
     FaBookOpen,
     FaEdit,
+    FaFileAlt,
     FaPlus,
     FaSearch,
     FaStickyNote,
     FaTrash,
+    FaTimes,
+    FaClock,
+    FaLayerGroup,
 } from "react-icons/fa";
 
 import {
@@ -35,6 +39,8 @@ import noteService from "../services/noteService";
 
 import { useAuth } from "../context/AuthContext";
 
+import "./Notes.css";
+
 
 const EMPTY_FORM = {
     title: "",
@@ -45,25 +51,21 @@ const EMPTY_FORM = {
 const PAGE_SIZE = 6;
 
 
+/* =========================================================
+   DATE FORMATTERS
+========================================================= */
+
 const formatDate = (dateTime) => {
 
     if (!dateTime) {
         return "No date";
     }
 
+    const date = new Date(dateTime);
 
-    const date =
-        new Date(dateTime);
-
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
+    if (Number.isNaN(date.getTime())) {
         return "Invalid date";
     }
-
 
     return date.toLocaleDateString(
         "en-IN",
@@ -82,19 +84,11 @@ const formatTime = (dateTime) => {
         return "";
     }
 
+    const date = new Date(dateTime);
 
-    const date =
-        new Date(dateTime);
-
-
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
+    if (Number.isNaN(date.getTime())) {
         return "";
     }
-
 
     return date.toLocaleTimeString(
         "en-IN",
@@ -106,17 +100,39 @@ const formatTime = (dateTime) => {
 };
 
 
+/* =========================================================
+   NOTE COLOR HELPER
+========================================================= */
+
+const getNoteAccent = (index) => {
+
+    const accents = [
+        "note-accent-blue",
+        "note-accent-purple",
+        "note-accent-cyan",
+        "note-accent-indigo",
+        "note-accent-teal",
+        "note-accent-pink",
+    ];
+
+    return accents[index % accents.length];
+};
+
+
+/* =========================================================
+   COMPONENT
+========================================================= */
+
 function Notes() {
 
     const { auth } = useAuth();
 
 
-    // =========================================================
-    // DATA
-    // =========================================================
+    /* =====================================================
+       DATA
+    ===================================================== */
 
-    const [notes, setNotes] =
-        useState([]);
+    const [notes, setNotes] = useState([]);
 
     const [currentPage, setCurrentPage] =
         useState(0);
@@ -128,9 +144,9 @@ function Notes() {
         useState(0);
 
 
-    // =========================================================
-    // SEARCH
-    // =========================================================
+    /* =====================================================
+       SEARCH
+    ===================================================== */
 
     const [searchInput, setSearchInput] =
         useState("");
@@ -139,9 +155,9 @@ function Notes() {
         useState("");
 
 
-    // =========================================================
-    // UI STATE
-    // =========================================================
+    /* =====================================================
+       UI STATE
+    ===================================================== */
 
     const [loading, setLoading] =
         useState(true);
@@ -152,7 +168,6 @@ function Notes() {
     const [deletingId, setDeletingId] =
         useState(null);
 
-
     const [error, setError] =
         useState("");
 
@@ -160,9 +175,9 @@ function Notes() {
         useState("");
 
 
-    // =========================================================
-    // MODAL
-    // =========================================================
+    /* =====================================================
+       MODAL
+    ===================================================== */
 
     const [showModal, setShowModal] =
         useState(false);
@@ -170,16 +185,15 @@ function Notes() {
     const [editingNote, setEditingNote] =
         useState(null);
 
-
     const [formData, setFormData] =
         useState({
             ...EMPTY_FORM,
         });
 
 
-    // =========================================================
-    // FETCH NOTES
-    // =========================================================
+    /* =====================================================
+       FETCH NOTES
+    ===================================================== */
 
     const fetchNotes = useCallback(
         async (
@@ -215,9 +229,7 @@ function Notes() {
                 let data;
 
 
-                if (
-                    keyword.trim()
-                ) {
+                if (keyword.trim()) {
 
                     data =
                         await noteService.searchNotes(
@@ -239,9 +251,7 @@ function Notes() {
 
 
                 setNotes(
-                    Array.isArray(
-                        data?.content
-                    )
+                    Array.isArray(data?.content)
                         ? data.content
                         : []
                 );
@@ -261,14 +271,12 @@ function Notes() {
                     data?.totalElements ?? 0
                 );
 
-
             } catch (err) {
 
                 console.error(
                     "Failed to fetch notes:",
                     err
                 );
-
 
                 console.error(
                     "Notes API response:",
@@ -299,71 +307,57 @@ function Notes() {
     );
 
 
-    // =========================================================
-    // INITIAL LOAD
-    // =========================================================
+    /* =====================================================
+       INITIAL LOAD + SEARCH
+       
+       IMPORTANT:
+       We intentionally use ONE effect here.
+       Your previous version had two effects which could
+       trigger duplicate API calls.
+    ===================================================== */
 
     useEffect(() => {
 
-        if (auth?.userId) {
+        if (!auth?.userId) {
+            return;
+        }
+
+
+        const timer = setTimeout(() => {
+
+            const keyword =
+                searchInput.trim();
+
+
+            setSearchKeyword(keyword);
+
+            setCurrentPage(0);
+
 
             fetchNotes(
                 0,
-                searchKeyword
+                keyword
             );
-        }
+
+        }, 400);
+
+
+        return () => {
+            clearTimeout(timer);
+        };
 
     }, [
         auth?.userId,
-        fetchNotes,
-    ]);
-
-
-    // =========================================================
-    // DEBOUNCED SEARCH
-    // =========================================================
-
-    useEffect(() => {
-
-        const timer =
-            setTimeout(() => {
-
-                const keyword =
-                    searchInput.trim();
-
-
-                setSearchKeyword(
-                    keyword
-                );
-
-
-                setCurrentPage(0);
-
-
-                fetchNotes(
-                    0,
-                    keyword
-                );
-
-            }, 400);
-
-
-        return () =>
-            clearTimeout(timer);
-
-    }, [
         searchInput,
         fetchNotes,
     ]);
 
 
-    // =========================================================
-    // FORM HANDLER
-    // =========================================================
+    /* =====================================================
+       INPUT HANDLER
+    ===================================================== */
 
-    const handleInputChange = (
-        event
-    ) => {
+    const handleInputChange = (event) => {
 
         const {
             name,
@@ -380,9 +374,9 @@ function Notes() {
     };
 
 
-    // =========================================================
-    // OPEN CREATE MODAL
-    // =========================================================
+    /* =====================================================
+       OPEN CREATE MODAL
+    ===================================================== */
 
     const handleOpenCreate = () => {
 
@@ -400,22 +394,17 @@ function Notes() {
     };
 
 
-    // =========================================================
-    // OPEN EDIT MODAL
-    // =========================================================
+    /* =====================================================
+       OPEN EDIT MODAL
+    ===================================================== */
 
-    const handleOpenEdit = (
-        note
-    ) => {
+    const handleOpenEdit = (note) => {
 
         setEditingNote(note);
 
         setFormData({
-            title:
-                note.title || "",
-
-            content:
-                note.content || "",
+            title: note.title || "",
+            content: note.content || "",
         });
 
         setError("");
@@ -426,9 +415,9 @@ function Notes() {
     };
 
 
-    // =========================================================
-    // CLOSE MODAL
-    // =========================================================
+    /* =====================================================
+       CLOSE MODAL
+    ===================================================== */
 
     const handleCloseModal = () => {
 
@@ -447,9 +436,9 @@ function Notes() {
     };
 
 
-    // =========================================================
-    // VALIDATE FORM
-    // =========================================================
+    /* =====================================================
+       VALIDATE FORM
+    ===================================================== */
 
     const validateForm = () => {
 
@@ -481,13 +470,11 @@ function Notes() {
     };
 
 
-    // =========================================================
-    // SAVE NOTE
-    // =========================================================
+    /* =====================================================
+       SAVE NOTE
+    ===================================================== */
 
-    const handleSubmit = async (
-        event
-    ) => {
+    const handleSubmit = async (event) => {
 
         event.preventDefault();
 
@@ -515,6 +502,7 @@ function Notes() {
 
 
         const payload = {
+
             title:
                 formData.title.trim(),
 
@@ -561,11 +549,6 @@ function Notes() {
             });
 
 
-            /*
-             * After creating/updating,
-             * return to first page.
-             */
-
             setCurrentPage(0);
 
 
@@ -574,14 +557,12 @@ function Notes() {
                 searchKeyword
             );
 
-
         } catch (err) {
 
             console.error(
                 "Failed to save note:",
                 err
             );
-
 
             console.error(
                 "Save note response:",
@@ -602,13 +583,11 @@ function Notes() {
     };
 
 
-    // =========================================================
-    // DELETE NOTE
-    // =========================================================
+    /* =====================================================
+       DELETE NOTE
+    ===================================================== */
 
-    const handleDelete = async (
-        note
-    ) => {
+    const handleDelete = async (note) => {
 
         if (!auth?.userId) {
 
@@ -631,9 +610,7 @@ function Notes() {
         }
 
 
-        setDeletingId(
-            note.id
-        );
+        setDeletingId(note.id);
 
         setError("");
 
@@ -653,11 +630,6 @@ function Notes() {
             );
 
 
-            /*
-             * If deleting the last item
-             * on a page, move to previous page.
-             */
-
             const shouldGoPreviousPage =
                 notes.length === 1 &&
                 currentPage > 0;
@@ -669,16 +641,13 @@ function Notes() {
                     : currentPage;
 
 
-            setCurrentPage(
-                nextPage
-            );
+            setCurrentPage(nextPage);
 
 
             await fetchNotes(
                 nextPage,
                 searchKeyword
             );
-
 
         } catch (err) {
 
@@ -707,17 +676,13 @@ function Notes() {
     };
 
 
-    // =========================================================
-    // PAGE CHANGE
-    // =========================================================
+    /* =====================================================
+       PAGE CHANGE
+    ===================================================== */
 
-    const handlePageChange = (
-        page
-    ) => {
+    const handlePageChange = (page) => {
 
-        setCurrentPage(
-            page
-        );
+        setCurrentPage(page);
 
 
         fetchNotes(
@@ -733,9 +698,9 @@ function Notes() {
     };
 
 
-    // =========================================================
-    // CLEAR SEARCH
-    // =========================================================
+    /* =====================================================
+       CLEAR SEARCH
+    ===================================================== */
 
     const handleClearSearch = () => {
 
@@ -745,6 +710,7 @@ function Notes() {
 
         setCurrentPage(0);
 
+
         fetchNotes(
             0,
             ""
@@ -752,101 +718,114 @@ function Notes() {
     };
 
 
-    // =========================================================
-    // RENDER
-    // =========================================================
+    /* =====================================================
+       RENDER
+    ===================================================== */
 
     return (
         <>
             <AppNavbar />
 
 
-            <main>
+            <main className="notes-page">
 
                 <Container
-                    className="
-                        py-4
-                        py-lg-5
-                    "
+                    className="py-4 py-lg-5"
                 >
 
-                    {/* ================================================= */}
-                    {/* PAGE HEADER */}
-                    {/* ================================================= */}
+                    {/* =================================================
+                        HERO HEADER
+                    ================================================= */}
 
-                    <div
+                    <section
                         className="
-                            d-flex
-                            flex-column
-                            flex-md-row
-                            justify-content-between
-                            align-items-md-center
-                            gap-3
+                            notes-hero
                             mb-4
                         "
                     >
 
-                        <div>
+                        <div
+                            className="
+                                d-flex
+                                flex-column
+                                flex-lg-row
+                                justify-content-between
+                                align-items-lg-center
+                                gap-4
+                            "
+                        >
 
-                            <div
-                                className="
-                                    d-flex
-                                    align-items-center
-                                    gap-2
-                                    mb-1
-                                "
-                            >
+                            <div>
 
-                                <FaStickyNote
-                                    className="text-primary"
-                                />
+                                <div
+                                    className="
+                                        notes-eyebrow
+                                        mb-2
+                                    "
+                                >
+
+                                    <span
+                                        className="
+                                            notes-eyebrow-icon
+                                        "
+                                    >
+                                        <FaStickyNote />
+                                    </span>
+
+                                    PERSONAL KNOWLEDGE HUB
+
+                                </div>
+
 
                                 <h1
                                     className="
-                                        fw-bold
+                                        notes-title
+                                        mb-2
+                                    "
+                                >
+                                    Your Notes
+                                </h1>
+
+
+                                <p
+                                    className="
+                                        notes-subtitle
                                         mb-0
                                     "
                                 >
-                                    Notes
-                                </h1>
+                                    Capture ideas, learning,
+                                    development insights and
+                                    project knowledge in one place.
+                                </p>
 
                             </div>
 
 
-                            <p
+                            <Button
                                 className="
-                                    text-muted
-                                    mb-0
+                                    notes-primary-btn
                                 "
+                                onClick={
+                                    handleOpenCreate
+                                }
                             >
-                                Capture important learning,
-                                development, and project notes.
-                            </p>
+
+                                <FaPlus
+                                    className="me-2"
+                                />
+
+                                New Note
+
+                            </Button>
 
                         </div>
 
-
-                        <Button
-                            variant="primary"
-                            onClick={
-                                handleOpenCreate
-                            }
-                        >
-
-                            <FaPlus
-                                className="me-2"
-                            />
-
-                            Add Note
-
-                        </Button>
-
-                    </div>
+                    </section>
 
 
-                    {/* ================================================= */}
-                    {/* ALERTS */}
-                    {/* ================================================= */}
+                    {/* =================================================
+                        ALERTS
+                    ================================================= */}
 
                     {error && (
 
@@ -856,6 +835,9 @@ function Notes() {
                             onClose={() =>
                                 setError("")
                             }
+                            className="
+                                notes-alert
+                            "
                         >
                             {error}
                         </Alert>
@@ -871,6 +853,9 @@ function Notes() {
                             onClose={() =>
                                 setSuccess("")
                             }
+                            className="
+                                notes-alert
+                            "
                         >
                             {success}
                         </Alert>
@@ -878,123 +863,292 @@ function Notes() {
                     )}
 
 
-                    {/* ================================================= */}
-                    {/* SEARCH + STATISTICS */}
-                    {/* ================================================= */}
+                    {/* =================================================
+                        STATISTICS
+                    ================================================= */}
 
-                    <Card
+                    <Row
                         className="
-                            border-0
-                            shadow-sm
+                            g-3
                             mb-4
                         "
                     >
 
-                        <Card.Body>
+                        <Col
+                            xs={12}
+                            md={4}
+                        >
 
-                            <Row
+                            <Card
                                 className="
-                                    align-items-center
-                                    g-3
+                                    notes-stat-card
+                                    h-100
                                 "
                             >
 
-                                <Col
-                                    xs={12}
-                                    lg={8}
-                                >
-
-                                    <Form.Group>
-
-                                        <Form.Label
-                                            className="
-                                                fw-semibold
-                                            "
-                                        >
-                                            Search Notes
-                                        </Form.Label>
-
-
-                                        <div
-                                            className="
-                                                position-relative
-                                            "
-                                        >
-
-                                            <FaSearch
-                                                className="
-                                                    position-absolute
-                                                    top-50
-                                                    translate-middle-y
-                                                    ms-3
-                                                    text-muted
-                                                "
-                                            />
-
-
-                                            <Form.Control
-                                                type="search"
-                                                value={
-                                                    searchInput
-                                                }
-                                                onChange={
-                                                    event =>
-                                                        setSearchInput(
-                                                            event.target.value
-                                                        )
-                                                }
-                                                placeholder="
-                                                    Search by title or content...
-                                                "
-                                                className="ps-5"
-                                            />
-
-                                        </div>
-
-                                    </Form.Group>
-
-                                </Col>
-
-
-                                <Col
-                                    xs={12}
-                                    lg={4}
-                                >
+                                <Card.Body>
 
                                     <div
                                         className="
                                             d-flex
-                                            flex-column
-                                            justify-content-end
-                                            h-100
+                                            justify-content-between
+                                            align-items-center
                                         "
                                     >
 
-                                        <div
-                                            className="
-                                                text-muted
-                                                small
-                                                mb-1
-                                            "
-                                        >
-                                            Notes
+                                        <div>
+
+                                            <div
+                                                className="
+                                                    notes-stat-label
+                                                "
+                                            >
+                                                Total Notes
+                                            </div>
+
+
+                                            <div
+                                                className="
+                                                    notes-stat-value
+                                                "
+                                            >
+                                                {totalElements}
+                                            </div>
+
                                         </div>
 
 
                                         <div
                                             className="
-                                                fs-3
-                                                fw-bold
+                                                notes-stat-icon
+                                                notes-stat-blue
                                             "
                                         >
-                                            {totalElements}
+                                            <FaFileAlt />
                                         </div>
 
                                     </div>
 
-                                </Col>
+                                </Card.Body>
 
-                            </Row>
+                            </Card>
+
+                        </Col>
+
+
+                        <Col
+                            xs={12}
+                            md={4}
+                        >
+
+                            <Card
+                                className="
+                                    notes-stat-card
+                                    h-100
+                                "
+                            >
+
+                                <Card.Body>
+
+                                    <div
+                                        className="
+                                            d-flex
+                                            justify-content-between
+                                            align-items-center
+                                        "
+                                    >
+
+                                        <div>
+
+                                            <div
+                                                className="
+                                                    notes-stat-label
+                                                "
+                                            >
+                                                This Page
+                                            </div>
+
+
+                                            <div
+                                                className="
+                                                    notes-stat-value
+                                                "
+                                            >
+                                                {notes.length}
+                                            </div>
+
+                                        </div>
+
+
+                                        <div
+                                            className="
+                                                notes-stat-icon
+                                                notes-stat-purple
+                                            "
+                                        >
+                                            <FaLayerGroup />
+                                        </div>
+
+                                    </div>
+
+                                </Card.Body>
+
+                            </Card>
+
+                        </Col>
+
+
+                        <Col
+                            xs={12}
+                            md={4}
+                        >
+
+                            <Card
+                                className="
+                                    notes-stat-card
+                                    h-100
+                                "
+                            >
+
+                                <Card.Body>
+
+                                    <div
+                                        className="
+                                            d-flex
+                                            justify-content-between
+                                            align-items-center
+                                        "
+                                    >
+
+                                        <div>
+
+                                            <div
+                                                className="
+                                                    notes-stat-label
+                                                "
+                                            >
+                                                Search Status
+                                            </div>
+
+
+                                            <div
+                                                className="
+                                                    notes-stat-status
+                                                "
+                                            >
+                                                {searchKeyword
+                                                    ? "Active"
+                                                    : "All Notes"}
+                                            </div>
+
+                                        </div>
+
+
+                                        <div
+                                            className="
+                                                notes-stat-icon
+                                                notes-stat-cyan
+                                            "
+                                        >
+                                            <FaSearch />
+                                        </div>
+
+                                    </div>
+
+                                </Card.Body>
+
+                            </Card>
+
+                        </Col>
+
+                    </Row>
+
+
+                    {/* =================================================
+                        SEARCH
+                    ================================================= */}
+
+                    <Card
+                        className="
+                            notes-search-card
+                            mb-4
+                        "
+                    >
+
+                        <Card.Body
+                            className="p-3 p-lg-4"
+                        >
+
+                            <div
+                                className="
+                                    d-flex
+                                    flex-column
+                                    flex-lg-row
+                                    align-items-lg-center
+                                    gap-3
+                                "
+                            >
+
+                                <div
+                                    className="
+                                        notes-search-icon
+                                    "
+                                >
+                                    <FaSearch />
+                                </div>
+
+
+                                <div
+                                    className="
+                                        flex-grow-1
+                                    "
+                                >
+
+                                    <Form.Control
+                                        type="search"
+                                        value={
+                                            searchInput
+                                        }
+                                        onChange={
+                                            event =>
+                                                setSearchInput(
+                                                    event.target.value
+                                                )
+                                        }
+                                        placeholder="
+                                            Search notes by title or content...
+                                        "
+                                        className="
+                                            notes-search-input
+                                        "
+                                    />
+
+                                </div>
+
+
+                                {searchInput && (
+
+                                    <Button
+                                        variant="light"
+                                        className="
+                                            notes-clear-btn
+                                        "
+                                        onClick={
+                                            handleClearSearch
+                                        }
+                                    >
+
+                                        <FaTimes
+                                            className="me-1"
+                                        />
+
+                                        Clear
+
+                                    </Button>
+
+                                )}
+
+                            </div>
 
 
                             {searchKeyword && (
@@ -1004,31 +1158,27 @@ function Notes() {
                                         mt-3
                                         d-flex
                                         align-items-center
+                                        flex-wrap
                                         gap-2
                                     "
                                 >
 
-                                    <Badge
-                                        bg="primary-subtle"
-                                        text="primary"
-                                        className="border"
+                                    <span
+                                        className="
+                                            notes-search-label
+                                        "
                                     >
-                                        Searching:
-                                        {" "}
+                                        Searching for
+                                    </span>
+
+
+                                    <Badge
+                                        className="
+                                            notes-search-badge
+                                        "
+                                    >
                                         {searchKeyword}
                                     </Badge>
-
-
-                                    <Button
-                                        variant="link"
-                                        size="sm"
-                                        className="p-0"
-                                        onClick={
-                                            handleClearSearch
-                                        }
-                                    >
-                                        Clear search
-                                    </Button>
 
                                 </div>
 
@@ -1039,70 +1189,153 @@ function Notes() {
                     </Card>
 
 
-                    {/* ================================================= */}
-                    {/* NOTES */}
-                    {/* ================================================= */}
+                    {/* =================================================
+                        SECTION HEADER
+                    ================================================= */}
+
+                    <div
+                        className="
+                            d-flex
+                            justify-content-between
+                            align-items-center
+                            mb-3
+                        "
+                    >
+
+                        <div>
+
+                            <h2
+                                className="
+                                    notes-section-title
+                                    mb-1
+                                "
+                            >
+                                Recent Notes
+                            </h2>
+
+
+                            <p
+                                className="
+                                    notes-section-subtitle
+                                    mb-0
+                                "
+                            >
+                                Your latest thoughts and learning.
+                            </p>
+
+                        </div>
+
+
+                        {!loading &&
+                            notes.length > 0 && (
+
+                                <span
+                                    className="
+                                        notes-count-pill
+                                    "
+                                >
+                                    {totalElements}{" "}
+                                    {totalElements === 1
+                                        ? "note"
+                                        : "notes"}
+                                </span>
+
+                            )}
+
+                    </div>
+
+
+                    {/* =================================================
+                        NOTES CONTENT
+                    ================================================= */}
 
                     {loading ? (
 
-                        <LoadingState
-                            message="Loading your notes..."
-                        />
+                        <div
+                            className="
+                                notes-loading-wrapper
+                            "
+                        >
+
+                            <LoadingState
+                                message="
+                                    Loading your notes...
+                                "
+                            />
+
+                        </div>
 
                     ) : notes.length === 0 ? (
 
-                        <EmptyState
-                            title={
-                                searchKeyword
-                                    ? "No matching notes"
-                                    : "No notes yet"
-                            }
+                        <div
+                            className="
+                                notes-empty-wrapper
+                            "
+                        >
 
-                            message={
-                                searchKeyword
-                                    ? "Try a different search keyword."
-                                    : "Start organizing your learning and development by creating your first note."
-                            }
+                            <EmptyState
+                                title={
+                                    searchKeyword
+                                        ? "No matching notes"
+                                        : "Your notebook is empty"
+                                }
 
-                            action={
-                                searchKeyword
-                                    ? (
-                                        <Button
-                                            variant="outline-primary"
-                                            onClick={
-                                                handleClearSearch
-                                            }
-                                        >
-                                            Clear Search
-                                        </Button>
-                                    )
-                                    : (
-                                        <Button
-                                            variant="primary"
-                                            onClick={
-                                                handleOpenCreate
-                                            }
-                                        >
+                                message={
+                                    searchKeyword
+                                        ? "Try another keyword or clear the search to see all your notes."
+                                        : "Start capturing your learning, ideas and project knowledge."
+                                }
 
-                                            <FaPlus
-                                                className="me-2"
-                                            />
+                                action={
+                                    searchKeyword
+                                        ? (
+                                            <Button
+                                                variant="
+                                                    outline-primary
+                                                "
+                                                onClick={
+                                                    handleClearSearch
+                                                }
+                                            >
+                                                Clear Search
+                                            </Button>
+                                        )
+                                        : (
+                                            <Button
+                                                className="
+                                                    notes-primary-btn
+                                                "
+                                                onClick={
+                                                    handleOpenCreate
+                                                }
+                                            >
 
-                                            Create Your First Note
+                                                <FaPlus
+                                                    className="me-2"
+                                                />
 
-                                        </Button>
-                                    )
-                            }
-                        />
+                                                Create First Note
+
+                                            </Button>
+                                        )
+                                }
+                            />
+
+                        </div>
 
                     ) : (
 
                         <Row
-                            className="g-4"
+                            className="
+                                g-4
+                            "
                         >
 
                             {notes.map(
-                                note => (
+                                (
+                                    note,
+                                    index
+                                ) => (
 
                                     <Col
                                         key={note.id}
@@ -1112,21 +1345,30 @@ function Notes() {
                                     >
 
                                         <Card
-                                            className="
-                                                border-0
-                                                shadow-sm
-                                                h-100
-                                            "
+                                            className={`
+                                                notes-card
+                                                ${getNoteAccent(index)}
+                                            `}
                                         >
+
+                                            {/* ACCENT LINE */}
+
+                                            <div
+                                                className="
+                                                    notes-card-accent
+                                                "
+                                            />
+
 
                                             <Card.Body
                                                 className="
                                                     d-flex
                                                     flex-column
+                                                    p-4
                                                 "
                                             >
 
-                                                {/* NOTE HEADER */}
+                                                {/* HEADER */}
 
                                                 <div
                                                     className="
@@ -1138,195 +1380,163 @@ function Notes() {
                                                     "
                                                 >
 
-                                                    <div>
-
-                                                        <h5
-                                                            className="
-                                                                fw-bold
-                                                                mb-1
-                                                            "
-                                                        >
-                                                            {
-                                                                note.title
-                                                            }
-                                                        </h5>
-
-
-                                                        <small
-                                                            className="
-                                                                text-muted
-                                                            "
-                                                        >
-                                                            Note #
-                                                            {
-                                                                note.id
-                                                            }
-                                                        </small>
-
+                                                    <div
+                                                        className="
+                                                            notes-card-icon
+                                                        "
+                                                    >
+                                                        <FaBookOpen />
                                                     </div>
 
 
-                                                    <FaBookOpen
+                                                    <span
                                                         className="
-                                                            text-primary
-                                                        "
-                                                    />
-
-                                                </div>
-
-
-                                                {/* NOTE CONTENT */}
-
-                                                <div
-                                                    className="
-                                                        flex-grow-1
-                                                        mb-4
-                                                    "
-                                                >
-
-                                                    <p
-                                                        className="
-                                                            text-muted
-                                                            mb-0
-                                                        "
-                                                        style={{
-                                                            whiteSpace:
-                                                                "pre-wrap",
-                                                            display:
-                                                                "-webkit-box",
-                                                            WebkitLineClamp:
-                                                                6,
-                                                            WebkitBoxOrient:
-                                                                "vertical",
-                                                            overflow:
-                                                                "hidden",
-                                                        }}
-                                                    >
-                                                        {
-                                                            note.content ||
-                                                            "No content added."
-                                                        }
-                                                    </p>
-
-                                                </div>
-
-
-                                                {/* DATE */}
-
-                                                <div
-                                                    className="
-                                                        border-top
-                                                        pt-3
-                                                        mb-3
-                                                    "
-                                                >
-
-                                                    <small
-                                                        className="
-                                                            text-muted
+                                                            notes-date-pill
                                                         "
                                                     >
-                                                        Created{" "}
-                                                        {
-                                                            formatDate(
-                                                                note.createdAt
-                                                            )
-                                                        }
-
-                                                        {" • "}
-
-                                                        {
-                                                            formatTime(
-                                                                note.createdAt
-                                                            )
-                                                        }
-                                                    </small>
-
-                                                </div>
-
-
-                                                {/* ACTIONS */}
-
-                                                <div
-                                                    className="
-                                                        d-flex
-                                                        gap-2
-                                                    "
-                                                >
-
-                                                    <Button
-                                                        variant="
-                                                            outline-primary
-                                                        "
-                                                        size="sm"
-                                                        className="
-                                                            flex-grow-1
-                                                        "
-                                                        onClick={() =>
-                                                            handleOpenEdit(
-                                                                note
-                                                            )
-                                                        }
-                                                    >
-
-                                                        <FaEdit
+                                                        <FaClock
                                                             className="
                                                                 me-1
                                                             "
                                                         />
 
-                                                        Edit
+                                                        {formatDate(
+                                                            note.createdAt
+                                                        )}
+                                                    </span>
 
-                                                    </Button>
+                                                </div>
 
 
-                                                    <Button
-                                                        variant="
-                                                            outline-danger
-                                                        "
-                                                        size="sm"
+                                                {/* TITLE */}
+
+                                                <h3
+                                                    className="
+                                                        notes-card-title
+                                                    "
+                                                >
+                                                    {note.title}
+                                                </h3>
+
+
+                                                {/* CONTENT */}
+
+                                                <div
+                                                    className="
+                                                        notes-card-content
+                                                    "
+                                                >
+
+                                                    <p
+                                                        style={{
+                                                            whiteSpace:
+                                                                "pre-wrap",
+                                                        }}
+                                                    >
+                                                        {note.content ||
+                                                            "No content added to this note yet."}
+                                                    </p>
+
+                                                </div>
+
+
+                                                {/* FOOTER */}
+
+                                                <div
+                                                    className="
+                                                        notes-card-footer
+                                                    "
+                                                >
+
+                                                    <div>
+
+                                                        <small
+                                                            className="
+                                                                notes-created-label
+                                                            "
+                                                        >
+                                                            Created
+                                                        </small>
+
+
+                                                        <div
+                                                            className="
+                                                                notes-created-value
+                                                            "
+                                                        >
+                                                            {formatTime(
+                                                                note.createdAt
+                                                            )}
+                                                        </div>
+
+                                                    </div>
+
+
+                                                    <div
                                                         className="
-                                                            flex-grow-1
+                                                            d-flex
+                                                            gap-2
                                                         "
-                                                        disabled={
-                                                            deletingId ===
-                                                            note.id
-                                                        }
-                                                        onClick={() =>
-                                                            handleDelete(
-                                                                note
-                                                            )
-                                                        }
                                                     >
 
-                                                        {deletingId ===
-                                                        note.id ? (
+                                                        <Button
+                                                            variant="
+                                                                light
+                                                            "
+                                                            className="
+                                                                notes-action-btn
+                                                                notes-edit-btn
+                                                            "
+                                                            onClick={() =>
+                                                                handleOpenEdit(
+                                                                    note
+                                                                )
+                                                            }
+                                                        >
 
-                                                            <>
+                                                            <FaEdit />
+
+                                                        </Button>
+
+
+                                                        <Button
+                                                            variant="
+                                                                light
+                                                            "
+                                                            className="
+                                                                notes-action-btn
+                                                                notes-delete-btn
+                                                            "
+                                                            disabled={
+                                                                deletingId ===
+                                                                note.id
+                                                            }
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    note
+                                                                )
+                                                            }
+                                                        >
+
+                                                            {deletingId ===
+                                                            note.id ? (
+
                                                                 <Spinner
-                                                                    animation="border"
-                                                                    size="sm"
-                                                                    className="me-1"
-                                                                />
-
-                                                                Deleting...
-                                                            </>
-
-                                                        ) : (
-
-                                                            <>
-                                                                <FaTrash
-                                                                    className="
-                                                                        me-1
+                                                                    animation="
+                                                                        border
                                                                     "
+                                                                    size="sm"
                                                                 />
 
-                                                                Delete
-                                                            </>
+                                                            ) : (
 
-                                                        )}
+                                                                <FaTrash />
 
-                                                    </Button>
+                                                            )}
+
+                                                        </Button>
+
+                                                    </div>
 
                                                 </div>
 
@@ -1344,24 +1554,33 @@ function Notes() {
                     )}
 
 
-                    {/* ================================================= */}
-                    {/* PAGINATION */}
-                    {/* ================================================= */}
+                    {/* =================================================
+                        PAGINATION
+                    ================================================= */}
 
                     {!loading &&
-                        notes.length > 0 && (
+                        notes.length > 0 &&
+                        totalPages > 1 && (
 
-                            <Pagination
-                                currentPage={
-                                    currentPage
-                                }
-                                totalPages={
-                                    totalPages
-                                }
-                                onPageChange={
-                                    handlePageChange
-                                }
-                            />
+                            <div
+                                className="
+                                    mt-5
+                                "
+                            >
+
+                                <Pagination
+                                    currentPage={
+                                        currentPage
+                                    }
+                                    totalPages={
+                                        totalPages
+                                    }
+                                    onPageChange={
+                                        handlePageChange
+                                    }
+                                />
+
+                            </div>
 
                         )}
 
@@ -1370,15 +1589,17 @@ function Notes() {
             </main>
 
 
-            {/* ========================================================= */}
-            {/* CREATE / EDIT MODAL */}
-            {/* ========================================================= */}
+            {/* =========================================================
+                CREATE / EDIT MODAL
+            ========================================================= */}
 
             <Modal
                 show={showModal}
                 onHide={handleCloseModal}
                 centered
                 backdrop="static"
+                size="lg"
+                className="notes-modal"
             >
 
                 <Form
@@ -1389,31 +1610,69 @@ function Notes() {
 
                     <Modal.Header
                         closeButton={!saving}
+                        className="
+                            notes-modal-header
+                        "
                     >
 
-                        <Modal.Title
-                            className="fw-bold"
-                        >
+                        <div>
 
-                            {editingNote
-                                ? "Edit Note"
-                                : "Create Note"}
+                            <div
+                                className="
+                                    notes-modal-icon
+                                    mb-2
+                                "
+                            >
+                                <FaStickyNote />
+                            </div>
 
-                        </Modal.Title>
+
+                            <Modal.Title
+                                className="
+                                    fw-bold
+                                "
+                            >
+
+                                {editingNote
+                                    ? "Edit your note"
+                                    : "Create a new note"}
+
+                            </Modal.Title>
+
+
+                            <p
+                                className="
+                                    notes-modal-subtitle
+                                    mb-0
+                                "
+                            >
+                                {editingNote
+                                    ? "Update your knowledge and keep it organized."
+                                    : "Capture something worth remembering."}
+                            </p>
+
+                        </div>
 
                     </Modal.Header>
 
 
-                    <Modal.Body>
+                    <Modal.Body
+                        className="
+                            p-4
+                            p-lg-5
+                        "
+                    >
 
                         <Form.Group
-                            className="mb-3"
+                            className="mb-4"
                         >
 
                             <Form.Label
-                                className="fw-semibold"
+                                className="
+                                    notes-form-label
+                                "
                             >
-                                Title
+                                Note Title
                             </Form.Label>
 
 
@@ -1432,14 +1691,38 @@ function Notes() {
                                 maxLength={150}
                                 required
                                 disabled={saving}
+                                className="
+                                    notes-form-control
+                                "
                             />
 
 
-                            <Form.Text
-                                className="text-muted"
+                            <div
+                                className="
+                                    d-flex
+                                    justify-content-between
+                                    mt-2
+                                "
                             >
-                                Maximum 150 characters.
-                            </Form.Text>
+
+                                <small
+                                    className="
+                                        text-muted
+                                    "
+                                >
+                                    Give your note a clear title.
+                                </small>
+
+
+                                <small
+                                    className="
+                                        text-muted
+                                    "
+                                >
+                                    {formData.title.length}/150
+                                </small>
+
+                            </div>
 
                         </Form.Group>
 
@@ -1447,7 +1730,9 @@ function Notes() {
                         <Form.Group>
 
                             <Form.Label
-                                className="fw-semibold"
+                                className="
+                                    notes-form-label
+                                "
                             >
                                 Content
                             </Form.Label>
@@ -1455,7 +1740,7 @@ function Notes() {
 
                             <Form.Control
                                 as="textarea"
-                                rows={8}
+                                rows={10}
                                 name="content"
                                 value={
                                     formData.content
@@ -1464,20 +1749,58 @@ function Notes() {
                                     handleInputChange
                                 }
                                 placeholder="
-                                    Write your note here...
+                                    Write your learning, ideas, code concepts, project notes...
                                 "
                                 disabled={saving}
+                                className="
+                                    notes-form-control
+                                    notes-textarea
+                                "
                             />
 
+
+                            <small
+                                className="
+                                    text-muted
+                                    d-block
+                                    mt-2
+                                "
+                            >
+                                Write freely. You can edit this
+                                note anytime.
+                            </small>
+
                         </Form.Group>
+
+
+                        {error && (
+
+                            <Alert
+                                variant="danger"
+                                className="
+                                    mt-4
+                                    mb-0
+                                "
+                            >
+                                {error}
+                            </Alert>
+
+                        )}
 
                     </Modal.Body>
 
 
-                    <Modal.Footer>
+                    <Modal.Footer
+                        className="
+                            notes-modal-footer
+                        "
+                    >
 
                         <Button
-                            variant="secondary"
+                            variant="light"
+                            className="
+                                notes-modal-cancel
+                            "
                             onClick={
                                 handleCloseModal
                             }
@@ -1488,8 +1811,10 @@ function Notes() {
 
 
                         <Button
-                            variant="primary"
                             type="submit"
+                            className="
+                                notes-primary-btn
+                            "
                             disabled={saving}
                         >
 
@@ -1503,15 +1828,21 @@ function Notes() {
                                     />
 
                                     {editingNote
-                                        ? "Updating..."
-                                        : "Creating..."}
+                                        ? "Saving changes..."
+                                        : "Creating note..."}
                                 </>
 
                             ) : (
 
-                                editingNote
-                                    ? "Update Note"
-                                    : "Create Note"
+                                <>
+                                    <FaPlus
+                                        className="me-2"
+                                    />
+
+                                    {editingNote
+                                        ? "Save Changes"
+                                        : "Create Note"}
+                                </>
 
                             )}
 

@@ -1,76 +1,191 @@
-import { Container, Nav, Navbar, Button } from "react-bootstrap";
-import { Link, useNavigate } from "react-router-dom";
+import {Container,Nav,Navbar,Button,} from "react-bootstrap";
 
-import { FaTachometerAlt, FaBook, FaProjectDiagram, FaHistory, FaStickyNote, FaSignOutAlt } from "react-icons/fa";
+import {Link,useLocation,useNavigate,} from "react-router-dom";
+
+import {FaTachometerAlt,FaBook,FaProjectDiagram,FaHistory,FaStickyNote,FaSignOutAlt,FaCode,} from "react-icons/fa";
+
 import { useAuth } from "../../context/AuthContext";
 
+import "./AppNavbar.css";
+
+
+const NAV_ITEMS = [
+    {
+        path: "/dashboard",
+        label: "Dashboard",
+        icon: FaTachometerAlt,
+    },
+    {
+        path: "/skills",
+        label: "Skills",
+        icon: FaBook,
+    },
+    {
+        path: "/projects",
+        label: "Projects",
+        icon: FaProjectDiagram,
+    },
+    {
+        path: "/daily-logs",
+        label: "Daily Logs",
+        icon: FaHistory,
+    },
+    {
+        path: "/notes",
+        label: "Notes",
+        icon: FaStickyNote,
+    },
+];
+
+
 function AppNavbar() {
-    const { auth, logout, } = useAuth();
+
+    const {
+        auth,
+        logout,
+    } = useAuth();
 
     const navigate = useNavigate();
+    const location = useLocation();
+
 
     const handleLogout = () => {
+
         logout();
-        navigate("/login");
+
+        navigate("/login", {
+            replace: true,
+        });
+    };
+
+
+    const isActive = (path) => {
+
+        return location.pathname === path;
     };
 
 
     return (
-        <Navbar expand="lg" bg="dark" data-bs-theme="dark" className="shadow-sm">
+
+        <Navbar
+            expand="lg"
+            className="devtrack-navbar"
+        >
+
             <Container>
-                <Navbar.Brand as={Link} to="/dashboard" className="fw-bold">
-                    DevTrack
+                <Navbar.Brand
+                    as={Link}
+                    to="/dashboard"
+                    className="devtrack-brand"
+                >
+
+                    <span className="brand-icon">
+                        <FaCode />
+                    </span>
+
+                    <span className="brand-text">
+                        Dev<span>Track</span>
+                    </span>
+
                 </Navbar.Brand>
-                <Navbar.Toggle aria-controls="main-navbar" />
-                <Navbar.Collapse id="main-navbar">
 
-                    <Nav className="me-auto">
-                        <Nav.Link as={Link} to="/dashboard">
-                            <FaTachometerAlt className="me-2" />
-                            Dashboard
-                        </Nav.Link>
+                <Navbar.Toggle
+                    aria-controls="devtrack-navbar"
+                    className="devtrack-navbar-toggle"
+                />
 
-                        <Nav.Link as={Link} to="/skills">
-                            <FaBook className="me-2" />
-                            Skills
-                        </Nav.Link>
+                <Navbar.Collapse
+                    id="devtrack-navbar"
+                >
 
-                        <Nav.Link as={Link} to="/projects">
-                            <FaProjectDiagram className="me-2" />
-                            Projects
-                        </Nav.Link>
+                    <Nav className="devtrack-nav mx-lg-auto">
 
-                        <Nav.Link as={Link} to="/daily-logs">
-                            <FaHistory className="me-2" />
-                            Daily Logs
-                        </Nav.Link>
+                        {NAV_ITEMS.map(
+                            ({
+                                path,
+                                label,
+                                icon: Icon,
+                            }) => (
 
-                        <Nav.Link
-                            as={Link}
-                            to="/notes"
+                                <Nav.Link
+                                    key={path}
+                                    as={Link}
+                                    to={path}
+                                    className={
+                                        `devtrack-nav-link ${
+                                            isActive(path)
+                                                ? "active"
+                                                : ""
+                                        }`
+                                    }
+                                >
+
+                                    <Icon className="nav-item-icon" />
+
+                                    <span>
+                                        {label}
+                                    </span>
+
+                                </Nav.Link>
+
+                            )
+                        )}
+
+                    </Nav>
+
+                    <div className="devtrack-user-section">
+                        <div className="devtrack-user">
+
+                            <div className="devtrack-avatar">
+                                {
+                                    (
+                                        auth?.name ||
+                                        "D"
+                                    )
+                                        .charAt(0)
+                                        .toUpperCase()
+                                }
+                            </div>
+
+
+                            <div className="devtrack-user-info">
+
+                                <span className="devtrack-user-label">
+                                    Welcome back
+                                </span>
+
+                                <span className="devtrack-user-name">
+                                    {auth?.name || "Developer"}
+                                </span>
+
+                            </div>
+
+                        </div>
+
+
+                        <Button
+                            variant="outline-danger"
+                            className="devtrack-logout"
+                            onClick={handleLogout}
                         >
-                            <FaStickyNote className="me-2" />
-                            Notes
-                        </Nav.Link>
-                        
-                    </Nav>
 
+                            <FaSignOutAlt />
 
-                    <Nav className="align-items-lg-center">
-                        <Navbar.Text className="me-lg-3">
-                            {auth?.name || "Developer"}
-                        </Navbar.Text>
+                            <span>
+                                Logout
+                            </span>
 
-
-                        <Button variant="outline-light" size="sm" onClick={handleLogout}>
-                            <FaSignOutAlt className="me-2" />
-                            Logout
                         </Button>
-                    </Nav>
+
+                    </div>
+
                 </Navbar.Collapse>
 
             </Container>
+
         </Navbar>
     );
 }
+
+
 export default AppNavbar;

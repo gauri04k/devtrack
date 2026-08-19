@@ -1,12 +1,10 @@
 import axiosClient from "./axiosClient";
 
 const dailyLogService = {
-
     getDailyLogs: async(userId) => {
         const response = await axiosClient.get(
             `/api/users/${userId}/logs`
         );
-
         return response.data;
     },
 
@@ -14,19 +12,15 @@ const dailyLogService = {
         const response = await axiosClient.get(
             `/api/users/${userId}/logs/${logId}`
         );
-
         return response.data;
     },
 
     getLogsByDate: async(userId, date) => {
         const response = await axiosClient.get(
             `/api/users/${userId}/logs/date`, {
-                params: {
-                    date,
-                },
+                params: { date },
             }
         );
-
         return response.data;
     },
 
@@ -34,7 +28,6 @@ const dailyLogService = {
         const response = await axiosClient.get(
             `/api/users/${userId}/logs/weekly-summary`
         );
-
         return response.data;
     },
 
@@ -43,7 +36,6 @@ const dailyLogService = {
             `/api/users/${userId}/logs`,
             logData
         );
-
         return response.data;
     },
 
@@ -52,15 +44,13 @@ const dailyLogService = {
             `/api/users/${userId}/logs/${logId}`,
             logData
         );
-
         return response.data;
     },
-    deleteDailyLog: async(userId, logId) => {
 
+    deleteDailyLog: async(userId, logId) => {
         const response = await axiosClient.delete(
             `/api/users/${userId}/logs/${logId}`
         );
-
         return response.data;
     },
 };

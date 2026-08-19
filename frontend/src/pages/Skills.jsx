@@ -1,31 +1,72 @@
-import { Alert, Button, Card, Col, Container, Form, Modal, Row, Spinner, } from "react-bootstrap";
+import {
+    Alert,
+    Button,
+    Card,
+    Col,
+    Container,
+    Form,
+    Modal,
+    Row,
+    Spinner,
+} from "react-bootstrap";
 
-import { useCallback, useEffect, useMemo, useState, } from "react";
+import {
+    FaBookOpen,
+    FaCheckCircle,
+    FaClock,
+    FaEdit,
+    FaLayerGroup,
+    FaPauseCircle,
+    FaPlus,
+    FaRocket,
+    FaTrash,
+} from "react-icons/fa";
+
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 
 import AppNavbar from "../components/layout/AppNavbar";
-import EmptyState from "../components/common/EmptyState";
+
 import LoadingState from "../components/common/LoadingState";
-import StatusBadge from "../components/common/StatusBadge";
 
 import skillService from "../services/skillService";
+
 import { useAuth } from "../context/AuthContext";
+
+import "./Skills.css";
+
+
+/* =========================================================
+   CONSTANTS
+   ========================================================= */
+
+const STATUS = {
+    ALL: "ALL",
+    LEARNING: "LEARNING",
+    COMPLETED: "COMPLETED",
+    PAUSED: "PAUSED",
+};
 
 
 const STATUS_OPTIONS = [
     {
-        value: "ALL",
+        value: STATUS.ALL,
         label: "All Skills",
     },
     {
-        value: "LEARNING",
+        value: STATUS.LEARNING,
         label: "Learning",
     },
     {
-        value: "COMPLETED",
+        value: STATUS.COMPLETED,
         label: "Completed",
     },
     {
-        value: "PAUSED",
+        value: STATUS.PAUSED,
         label: "Paused",
     },
 ];
@@ -33,108 +74,237 @@ const STATUS_OPTIONS = [
 
 const EMPTY_FORM = {
     name: "",
-    status: "LEARNING",
+    status: STATUS.LEARNING,
     targetDate: "",
 };
+
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
 
 const getToday = () => {
 
     const today = new Date();
 
-    const year = today.getFullYear();
+    const year =
+        today.getFullYear();
 
-    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const month =
+        String(today.getMonth() + 1)
+            .padStart(2, "0");
 
-    const day = String(today.getDate()).padStart(2, "0");
+    const day =
+        String(today.getDate())
+            .padStart(2, "0");
 
     return `${year}-${month}-${day}`;
 };
 
 
 const formatDate = (date) => {
-    if (!date) { return "No target date"; }
 
-    const parsedDate = new Date(`${date}T00:00:00`);
+    if (!date) {
+        return "No target date";
+    }
 
-    if (Number.isNaN(
-        parsedDate.getTime()
-    )) {
+    const parsedDate =
+        new Date(`${date}T00:00:00`);
+
+    if (
+        Number.isNaN(
+            parsedDate.getTime()
+        )
+    ) {
         return "Invalid date";
     }
 
     return parsedDate.toLocaleDateString(
         "en-IN",
-        { day: "2-digit", month: "2-digit", year: "numeric", }
+        {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        }
     );
 };
 
 
-const Skills = () => {
+const getStatusLabel = (status) => {
+
+    switch (status) {
+
+        case STATUS.LEARNING:
+            return "Learning";
+
+        case STATUS.COMPLETED:
+            return "Completed";
+
+        case STATUS.PAUSED:
+            return "Paused";
+
+        default:
+            return "Unknown";
+    }
+};
+
+
+const getStatusIcon = (status) => {
+
+    switch (status) {
+
+        case STATUS.LEARNING:
+            return <FaBookOpen />;
+
+        case STATUS.COMPLETED:
+            return <FaCheckCircle />;
+
+        case STATUS.PAUSED:
+            return <FaPauseCircle />;
+
+        default:
+            return <FaLayerGroup />;
+    }
+};
+
+
+/* =========================================================
+   SKILLS COMPONENT
+   ========================================================= */
+
+function Skills() {
+
     const { auth } = useAuth();
-    const [skills, setSkills] = useState([]);
 
-    const [activeFilter, setActiveFilter] = useState("ALL");
-    const [loading, setLoading] = useState(true);
 
-    const [saving, setSaving] = useState(false);
-    const [deletingId, setDeletingId] = useState(null);
-    const [error, setError] = useState("");
+    /* =====================================================
+       STATE
+       ===================================================== */
 
-    const [success, setSuccess] = useState("");
+    const [skills, setSkills] =
+        useState([]);
 
-    const [showModal, setShowModal] = useState(false);
+    const [activeFilter, setActiveFilter] =
+        useState(STATUS.ALL);
 
-    const [editingSkill, setEditingSkill] = useState(null);
+    const [loading, setLoading] =
+        useState(true);
 
-    const [formData, setFormData] = useState(EMPTY_FORM);
+    const [saving, setSaving] =
+        useState(false);
 
-    const today = useMemo(() => getToday(), []);
+    const [deletingId, setDeletingId] =
+        useState(null);
 
+    const [error, setError] =
+        useState("");
+
+    const [success, setSuccess] =
+        useState("");
+
+    const [showModal, setShowModal] =
+        useState(false);
+
+    const [editingSkill, setEditingSkill] =
+        useState(null);
+
+    const [formData, setFormData] =
+        useState(EMPTY_FORM);
+
+
+    const today =
+        useMemo(
+            () => getToday(),
+            []
+        );
+
+
+    /* =====================================================
+       FETCH SKILLS
+       ===================================================== */
 
     const fetchSkills = useCallback(
         async (status = "") => {
+
             if (!auth?.userId) {
+
                 setSkills([]);
 
-                setError("Unable to identify the logged-in user.");
+                setError(
+                    "Unable to identify the logged-in user."
+                );
+
                 setLoading(false);
+
                 return;
             }
 
+
             setLoading(true);
+
             setError("");
+
 
             try {
 
-                console.log("SKILLS USER ID:", auth.userId);
+                const data =
+                    await skillService.getSkills(
+                        auth.userId,
+                        status
+                    );
 
-                console.log("SKILLS STATUS:", status || "ALL");
-                const data = await skillService.getSkills(auth.userId, status);
-                console.log("SKILLS API RESPONSE:", data);
 
+                setSkills(
+                    Array.isArray(data)
+                        ? data
+                        : []
+                );
 
-                setSkills(Array.isArray(data) ? data : []);
 
             } catch (err) {
-                console.error("Failed to fetch skills:", err);
-                console.error("Skills API response:", err.response?.data);
+
+                console.error(
+                    "Failed to fetch skills:",
+                    err
+                );
+
+                console.error(
+                    "Skills API response:",
+                    err?.response?.data
+                );
+
 
                 setSkills([]);
 
-                setError(err.response?.data?.message || err.response?.data?.error || "Unable to load skills.");
+
+                setError(
+                    err?.response?.data?.message ||
+                    err?.response?.data?.error ||
+                    "Unable to load skills."
+                );
+
 
             } finally {
+
                 setLoading(false);
+
             }
 
         },
         [auth?.userId]
     );
 
+
+    /* =====================================================
+       INITIAL LOAD
+       ===================================================== */
+
     useEffect(() => {
 
         if (auth?.userId) {
+
             fetchSkills();
+
         }
 
     }, [
@@ -142,40 +312,90 @@ const Skills = () => {
         fetchSkills,
     ]);
 
-    const handleFilterChange = async (
-        status
-    ) => {
 
-        setActiveFilter(status);
+    /* =====================================================
+       STATISTICS
+       ===================================================== */
 
-        setSuccess("");
-        setError("");
+    const statistics = useMemo(() => {
 
-        await fetchSkills(
-            status === "ALL"
-                ? ""
-                : status
-        );
-    };
+        return {
 
-    const handleChange = (
-        event
-    ) => {
+            total:
+                skills.length,
 
-        const {
-            name,
-            value,
-        } = event.target;
+            learning:
+                skills.filter(
+                    (skill) =>
+                        skill?.status === STATUS.LEARNING
+                ).length,
+
+            completed:
+                skills.filter(
+                    (skill) =>
+                        skill?.status === STATUS.COMPLETED
+                ).length,
+
+            paused:
+                skills.filter(
+                    (skill) =>
+                        skill?.status === STATUS.PAUSED
+                ).length,
+
+        };
+
+    }, [skills]);
 
 
-        setFormData(
-            (previous) => ({
-                ...previous,
-                [name]: value,
-            })
-        );
-    };
+    /* =====================================================
+       FILTER
+       ===================================================== */
 
+    const handleFilterChange =
+        async (status) => {
+
+            setActiveFilter(status);
+
+            setSuccess("");
+
+            setError("");
+
+
+            await fetchSkills(
+                status === STATUS.ALL
+                    ? ""
+                    : status
+            );
+
+        };
+
+
+    /* =====================================================
+       FORM CHANGE
+       ===================================================== */
+
+    const handleChange =
+        (event) => {
+
+            const {
+                name,
+                value,
+            } = event.target;
+
+
+            setFormData(
+                (previous) => ({
+                    ...previous,
+                    [name]: value,
+                })
+            );
+
+        };
+
+
+    /* =====================================================
+       ADD SKILL
+       ===================================================== */
 
     const handleAddSkill = () => {
 
@@ -190,324 +410,492 @@ const Skills = () => {
         setSuccess("");
 
         setShowModal(true);
+
     };
 
-    const handleEditSkill = (
-        skill
-    ) => {
 
-        setEditingSkill(skill);
+    /* =====================================================
+       EDIT SKILL
+       ===================================================== */
 
-        setFormData({
+    const handleEditSkill =
+        (skill) => {
 
-            name:
-                skill.name || "",
+            setEditingSkill(skill);
 
-            status:
-                skill.status || "LEARNING",
+            setFormData({
 
-            targetDate:
-                skill.targetDate || "",
-        });
+                name:
+                    skill?.name || "",
 
-        setError("");
-        setSuccess("");
-        setShowModal(true);
-    };
+                status:
+                    skill?.status ||
+                    STATUS.LEARNING,
+
+                targetDate:
+                    skill?.targetDate || "",
+
+            });
+
+            setError("");
+
+            setSuccess("");
+
+            setShowModal(true);
+
+        };
+
+
+    /* =====================================================
+       CLOSE MODAL
+       ===================================================== */
 
     const handleCloseModal = () => {
+
         if (saving) {
             return;
         }
 
+
         setShowModal(false);
+
         setEditingSkill(null);
+
         setFormData({
             ...EMPTY_FORM,
         });
+
     };
+
+
+    /* =====================================================
+       VALIDATION
+       ===================================================== */
 
     const validateForm = () => {
 
-        const name = formData.name.trim();
+        const name =
+            formData.name.trim();
+
+
         if (!name) {
-            setError("Skill name is required.");
+
+            setError(
+                "Skill name is required."
+            );
+
             return false;
         }
 
 
         if (name.length < 2) {
-            setError("Skill name must contain at least 2 characters.");
+
+            setError(
+                "Skill name must contain at least 2 characters."
+            );
+
             return false;
         }
 
 
         if (name.length > 100) {
-            setError("Skill name cannot exceed 100 characters.");
+
+            setError(
+                "Skill name cannot exceed 100 characters."
+            );
+
             return false;
         }
 
 
         if (!formData.status) {
-            setError("Please select a skill status.");
+
+            setError(
+                "Please select a skill status."
+            );
+
             return false;
         }
 
 
-        if (formData.targetDate && formData.targetDate < today) {
-            setError("Target date cannot be in the past.");
+        if (
+            formData.targetDate &&
+            formData.targetDate < today
+        ) {
+
+            setError(
+                "Target date cannot be in the past."
+            );
+
             return false;
         }
+
+
         return true;
+
     };
 
-    const handleSubmit = async (event) => {
 
-        event.preventDefault();
-        if (!auth?.userId) {
-            setError("Unable to identify the logged-in user.");
-            return;
-        }
+    /* =====================================================
+       CREATE / UPDATE
+       ===================================================== */
 
+    const handleSubmit =
+        async (event) => {
 
-        if (!validateForm()) {
-            return;
-        }
+            event.preventDefault();
 
 
-        setSaving(true);
-        setError("");
-        setSuccess("");
-
-
-        try {
-
-            const payload = {
-                name:
-                    formData.name.trim(),
-
-                status:
-                    formData.status,
-
-                targetDate:
-                    formData.targetDate || null,
-            };
-            if (editingSkill) {
-                console.log("UPDATING SKILL:", editingSkill.id);
-                console.log("UPDATE PAYLOAD:", payload);
-
-                await skillService.updateSkill(auth.userId, editingSkill.id, payload);
-                setSuccess("Skill updated successfully.");
-
-            }
-            else {
-                console.log("CREATING SKILL");
-                console.log("CREATE PAYLOAD:", payload);
-                await skillService.createSkill(auth.userId, payload);
-                setSuccess("Skill added successfully.");
-            }
-
-
-            setShowModal(false);
-            setEditingSkill(null);
-
-            setFormData({
-                ...EMPTY_FORM,
-            });
-
-
-            await fetchSkills(
-                activeFilter === "ALL"
-                    ? ""
-                    : activeFilter
-            );
-
-        } catch (err) {
-
-            console.error(
-                "Skill save error:",
-                err
-            );
-
-            console.error(
-                "Backend error:",
-                err.response?.data
-            );
-
-
-            const backendMessage =
-                err.response?.data?.message;
-
-
-            const backendError =
-                err.response?.data?.error;
-
-
-            if (
-                err.response?.status === 400
-            ) {
+            if (!auth?.userId) {
 
                 setError(
-                    backendMessage || backendError || "Invalid skill data. Please check the form."
+                    "Unable to identify the logged-in user."
                 );
 
-            } else if (
-                err.response?.status === 404
-            ) {
-
-                setError(backendMessage || "User or skill was not found.");
-
-            } else if (
-                err.response?.status === 409
-            ) {
-
-                setError(backendMessage || "This skill already exists.");
-
-            } else {
-
-                setError(backendMessage || backendError || "Unable to save skill.");
+                return;
             }
 
-        } finally {
 
-            setSaving(false);
-        }
-    };
-    const handleDelete = async (
-        skill
-    ) => {
-
-        const confirmed =
-            window.confirm(
-                `Are you sure you want to delete "${skill.name}"?`
-            );
+            if (!validateForm()) {
+                return;
+            }
 
 
-        if (!confirmed) {
-            return;
-        }
+            setSaving(true);
+
+            setError("");
+
+            setSuccess("");
 
 
-        if (!auth?.userId) {
+            try {
 
-            setError(
-                "Unable to identify the logged-in user."
-            );
+                const payload = {
 
-            return;
-        }
+                    name:
+                        formData.name.trim(),
 
+                    status:
+                        formData.status,
 
-        setDeletingId(skill.id);
+                    targetDate:
+                        formData.targetDate ||
+                        null,
 
-        setError("");
-        setSuccess("");
-
-
-        try {
-
-            console.log(
-                "DELETING SKILL:",
-                skill.id
-            );
+                };
 
 
-            await skillService.deleteSkill(
-                auth.userId,
-                skill.id
-            );
+                if (editingSkill) {
+
+                    await skillService.updateSkill(
+                        auth.userId,
+                        editingSkill.id,
+                        payload
+                    );
 
 
-            setSuccess(
-                "Skill deleted successfully."
-            );
+                    setSuccess(
+                        "Skill updated successfully."
+                    );
+
+                } else {
+
+                    await skillService.createSkill(
+                        auth.userId,
+                        payload
+                    );
 
 
-            await fetchSkills(
-                activeFilter === "ALL"
-                    ? ""
-                    : activeFilter
-            );
+                    setSuccess(
+                        "Skill added successfully."
+                    );
 
-        } catch (err) {
-
-            console.error(
-                "Skill delete error:",
-                err
-            );
+                }
 
 
-            setError(
-                err.response?.data?.message ||
-                err.response?.data?.error ||
-                "Unable to delete skill."
-            );
+                setShowModal(false);
 
-        } finally {
+                setEditingSkill(null);
 
-            setDeletingId(null);
-        }
-    };
+                setFormData({
+                    ...EMPTY_FORM,
+                });
 
-    const statistics = useMemo(() => {
 
-        return {
+                await fetchSkills(
+                    activeFilter === STATUS.ALL
+                        ? ""
+                        : activeFilter
+                );
 
-            total:
-                skills.length,
 
-            learning:
-                skills.filter(
-                    (skill) =>
-                        skill.status === "LEARNING"
-                ).length,
+            } catch (err) {
 
-            completed:
-                skills.filter(
-                    (skill) =>
-                        skill.status === "COMPLETED"
-                ).length,
+                console.error(
+                    "Skill save error:",
+                    err
+                );
 
-            paused:
-                skills.filter(
-                    (skill) =>
-                        skill.status === "PAUSED"
-                ).length,
+
+                console.error(
+                    "Backend error:",
+                    err?.response?.data
+                );
+
+
+                const backendMessage =
+                    err?.response?.data?.message;
+
+
+                const backendError =
+                    err?.response?.data?.error;
+
+
+                if (
+                    err?.response?.status === 400
+                ) {
+
+                    setError(
+                        backendMessage ||
+                        backendError ||
+                        "Invalid skill data. Please check the form."
+                    );
+
+                } else if (
+                    err?.response?.status === 404
+                ) {
+
+                    setError(
+                        backendMessage ||
+                        "User or skill was not found."
+                    );
+
+                } else if (
+                    err?.response?.status === 409
+                ) {
+
+                    setError(
+                        backendMessage ||
+                        "This skill already exists."
+                    );
+
+                } else {
+
+                    setError(
+                        backendMessage ||
+                        backendError ||
+                        "Unable to save skill."
+                    );
+
+                }
+
+            } finally {
+
+                setSaving(false);
+
+            }
+
         };
 
-    }, [skills]);
 
+    /* =====================================================
+       DELETE
+       ===================================================== */
+
+    const handleDelete =
+        async (skill) => {
+
+            const confirmed =
+                window.confirm(
+                    `Are you sure you want to delete "${skill.name}"?`
+                );
+
+
+            if (!confirmed) {
+                return;
+            }
+
+
+            if (!auth?.userId) {
+
+                setError(
+                    "Unable to identify the logged-in user."
+                );
+
+                return;
+            }
+
+
+            setDeletingId(skill.id);
+
+            setError("");
+
+            setSuccess("");
+
+
+            try {
+
+                await skillService.deleteSkill(
+                    auth.userId,
+                    skill.id
+                );
+
+
+                setSuccess(
+                    "Skill deleted successfully."
+                );
+
+
+                await fetchSkills(
+                    activeFilter === STATUS.ALL
+                        ? ""
+                        : activeFilter
+                );
+
+
+            } catch (err) {
+
+                console.error(
+                    "Skill delete error:",
+                    err
+                );
+
+
+                setError(
+                    err?.response?.data?.message ||
+                    err?.response?.data?.error ||
+                    "Unable to delete skill."
+                );
+
+
+            } finally {
+
+                setDeletingId(null);
+
+            }
+
+        };
+
+
+    /* =====================================================
+       LOADING
+       ===================================================== */
+
+    if (loading) {
+
+        return (
+            <>
+                <AppNavbar />
+
+                <main className="skills-page">
+
+                    <Container className="py-5">
+
+                        <LoadingState
+                            message="Loading your skills..."
+                        />
+
+                    </Container>
+
+                </main>
+            </>
+        );
+
+    }
+
+
+    /* =====================================================
+       UI
+       ===================================================== */
 
     return (
         <>
             <AppNavbar />
 
+            <main className="skills-page">
 
-            <main>
+                <Container className="py-4 py-lg-5">
 
-                <Container
-                    className="py-4 py-lg-5"
-                >
-                    <div className="d-flexflex-columnflex-md-rowjustify-content-betweenalign-items-md-centergap-3mb-4">
 
-                        <div>
-                            <h1 className="fw-bold mb-1">Skills </h1>
-                            <p className="text-muted mb-0"> Track the technologies and skills you are currently learning. </p>
+                    {/* =================================================
+                        HERO
+                    ================================================= */}
+
+                    <section className="skills-hero mb-4">
+
+                        <div className="skills-hero-content">
+
+                            <div className="skills-eyebrow">
+
+                                <FaRocket />
+
+                                Learning Journey
+
+                            </div>
+
+
+                            <div className="skills-header-row">
+
+                                <div>
+
+                                    <h1 className="skills-title mb-2">
+                                        My Skills
+                                    </h1>
+
+                                    <p className="skills-subtitle mb-0">
+                                        Track the technologies and skills
+                                        you're learning, mastering, and
+                                        planning to explore.
+                                    </p>
+
+                                </div>
+
+
+                                <Button
+                                    className="skills-add-button"
+                                    onClick={
+                                        handleAddSkill
+                                    }
+                                >
+
+                                    <FaPlus className="me-2" />
+
+                                    Add Skill
+
+                                </Button>
+
+                            </div>
+
                         </div>
 
-                        <Button variant="primary" onClick={handleAddSkill} > + Add Skill</Button>
-                    </div>
+                    </section>
+
+
+                    {/* =================================================
+                        ALERTS
+                    ================================================= */}
 
                     {error && (
+
                         <Alert
                             variant="danger"
                             dismissible
                             onClose={() =>
                                 setError("")
                             }
+                            className="skills-alert skills-alert-danger"
                         >
-                            {error}
+
+                            <div className="fw-bold mb-1">
+                                Something went wrong
+                            </div>
+
+                            <div>
+                                {error}
+                            </div>
+
                         </Alert>
+
                     )}
 
 
@@ -519,34 +907,60 @@ const Skills = () => {
                             onClose={() =>
                                 setSuccess("")
                             }
+                            className="skills-alert skills-alert-success"
                         >
+
                             {success}
+
                         </Alert>
+
                     )}
-                    <Row className="g-3 mb-4">
+
+
+                    {/* =================================================
+                        STATISTICS
+                    ================================================= */}
+
+                    <Row className="g-3 g-lg-4 mb-4">
+
+
+                        {/* Total */}
 
                         <Col
                             xs={12}
                             sm={6}
-                            lg={3}
+                            xl={3}
                         >
 
-                            <Card
-                                className="
-                                    border-0
-                                    shadow-sm
-                                    h-100
-                                "
-                            >
+                            <Card className="skills-stat-card">
 
-                                <Card.Body>
+                                <Card.Body className="p-4">
 
-                                    <div className="text-muted small mb-2">
-                                        Total Skills
-                                    </div>
+                                    <div className="skills-stat-content">
 
-                                    <div className="fs-2 fw-bold">
-                                        {statistics.total}
+                                        <div>
+
+                                            <div className="skills-stat-label">
+                                                Total Skills
+                                            </div>
+
+                                            <div className="skills-stat-value">
+                                                {statistics.total}
+                                            </div>
+
+                                            <div className="skills-stat-description">
+                                                Your complete learning list
+                                            </div>
+
+                                        </div>
+
+
+                                        <div className="skills-stat-icon skills-stat-blue">
+
+                                            <FaLayerGroup />
+
+                                        </div>
+
                                     </div>
 
                                 </Card.Body>
@@ -556,32 +970,43 @@ const Skills = () => {
                         </Col>
 
 
+                        {/* Learning */}
+
                         <Col
                             xs={12}
                             sm={6}
-                            lg={3}
+                            xl={3}
                         >
 
-                            <Card
-                                className="
-                                    border-0
-                                    shadow-sm
-                                    h-100
-                                "
-                            >
+                            <Card className="skills-stat-card">
 
-                                <Card.Body>
+                                <Card.Body className="p-4">
 
-                                    <div className="text-muted small mb-2">
-                                        Learning
-                                    </div>
+                                    <div className="skills-stat-content">
 
-                                    <div className="
-                                        fs-2
-                                        fw-bold
-                                        text-primary
-                                    ">
-                                        {statistics.learning}
+                                        <div>
+
+                                            <div className="skills-stat-label">
+                                                Learning
+                                            </div>
+
+                                            <div className="skills-stat-value skills-value-blue">
+                                                {statistics.learning}
+                                            </div>
+
+                                            <div className="skills-stat-description">
+                                                Currently in progress
+                                            </div>
+
+                                        </div>
+
+
+                                        <div className="skills-stat-icon skills-stat-learning">
+
+                                            <FaBookOpen />
+
+                                        </div>
+
                                     </div>
 
                                 </Card.Body>
@@ -591,32 +1016,43 @@ const Skills = () => {
                         </Col>
 
 
+                        {/* Completed */}
+
                         <Col
                             xs={12}
                             sm={6}
-                            lg={3}
+                            xl={3}
                         >
 
-                            <Card
-                                className="
-                                    border-0
-                                    shadow-sm
-                                    h-100
-                                "
-                            >
+                            <Card className="skills-stat-card">
 
-                                <Card.Body>
+                                <Card.Body className="p-4">
 
-                                    <div className="text-muted small mb-2">
-                                        Completed
-                                    </div>
+                                    <div className="skills-stat-content">
 
-                                    <div className="
-                                        fs-2
-                                        fw-bold
-                                        text-success
-                                    ">
-                                        {statistics.completed}
+                                        <div>
+
+                                            <div className="skills-stat-label">
+                                                Completed
+                                            </div>
+
+                                            <div className="skills-stat-value skills-value-green">
+                                                {statistics.completed}
+                                            </div>
+
+                                            <div className="skills-stat-description">
+                                                Skills you've mastered
+                                            </div>
+
+                                        </div>
+
+
+                                        <div className="skills-stat-icon skills-stat-completed">
+
+                                            <FaCheckCircle />
+
+                                        </div>
+
                                     </div>
 
                                 </Card.Body>
@@ -626,32 +1062,43 @@ const Skills = () => {
                         </Col>
 
 
+                        {/* Paused */}
+
                         <Col
                             xs={12}
                             sm={6}
-                            lg={3}
+                            xl={3}
                         >
 
-                            <Card
-                                className="
-                                    border-0
-                                    shadow-sm
-                                    h-100
-                                "
-                            >
+                            <Card className="skills-stat-card">
 
-                                <Card.Body>
+                                <Card.Body className="p-4">
 
-                                    <div className="text-muted small mb-2">
-                                        Paused
-                                    </div>
+                                    <div className="skills-stat-content">
 
-                                    <div className="
-                                        fs-2
-                                        fw-bold
-                                        text-warning-emphasis
-                                    ">
-                                        {statistics.paused}
+                                        <div>
+
+                                            <div className="skills-stat-label">
+                                                Paused
+                                            </div>
+
+                                            <div className="skills-stat-value skills-value-orange">
+                                                {statistics.paused}
+                                            </div>
+
+                                            <div className="skills-stat-description">
+                                                Temporarily on hold
+                                            </div>
+
+                                        </div>
+
+
+                                        <div className="skills-stat-icon skills-stat-paused">
+
+                                            <FaPauseCircle />
+
+                                        </div>
+
                                     </div>
 
                                 </Card.Body>
@@ -662,66 +1109,79 @@ const Skills = () => {
 
                     </Row>
 
-                    <Card
-                        className="
-                            border-0
-                            shadow-sm
-                            mb-4
-                        "
-                    >
-                        <Card.Body>
 
-                            <div className="d-flexflex-columnflex-md-rowjustify-content-betweenalign-items-md-centergap-3" >
+                    {/* =================================================
+                        SKILL FILTER CARD
+                    ================================================= */}
+
+                    <Card className="skills-filter-card mb-4">
+
+                        <Card.Body className="p-4">
+
+                            <div className="skills-filter-header">
 
                                 <div>
-                                    <h5 className="fw-semibold mb-1">
-                                        My Skills
-                                    </h5>
 
-                                    <small className="text-muted">
-                                        Filter skills by their
-                                        current status.
-                                    </small>
+                                    <div className="skills-section-title">
+                                        Skill Library
+                                    </div>
+
+                                    <div className="skills-section-subtitle">
+                                        Filter your skills by their
+                                        current learning status.
+                                    </div>
 
                                 </div>
 
 
-                                <div
-                                    className="
-                                        d-flex
-                                        flex-wrap
-                                        gap-2
-                                    "
-                                >
+                                <div className="skills-total-pill">
 
-                                    {STATUS_OPTIONS.map(
-                                        (option) => (
+                                    <FaLayerGroup />
 
-                                            <Button
-                                                key={
-                                                    option.value
-                                                }
-                                                variant={
+                                    {statistics.total}
+
+                                    <span>
+                                        {statistics.total === 1
+                                            ? "skill"
+                                            : "skills"}
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+
+                            <div className="skills-filter-buttons">
+
+                                {STATUS_OPTIONS.map(
+                                    (option) => (
+
+                                        <button
+                                            key={
+                                                option.value
+                                            }
+                                            type="button"
+                                            className={
+                                                `skills-filter-button ${
                                                     activeFilter ===
-                                                        option.value
-                                                        ? "primary"
-                                                        : "outline-secondary"
-                                                }
-                                                size="sm"
-                                                onClick={() =>
-                                                    handleFilterChange(
-                                                        option.value
-                                                    )
-                                                }
-                                            >
-                                                {
-                                                    option.label
-                                                }
-                                            </Button>
-                                        )
-                                    )}
+                                                    option.value
+                                                        ? "active"
+                                                        : ""
+                                                }`
+                                            }
+                                            onClick={() =>
+                                                handleFilterChange(
+                                                    option.value
+                                                )
+                                            }
+                                        >
 
-                                </div>
+                                            {option.label}
+
+                                        </button>
+
+                                    )
+                                )}
 
                             </div>
 
@@ -729,244 +1189,313 @@ const Skills = () => {
 
                     </Card>
 
-                    {loading ? (
 
-                        <LoadingState
-                            message="Loading your skills..."
-                        />
+                    {/* =================================================
+                        SKILLS
+                    ================================================= */}
 
-                    ) : skills.length === 0 ? (
+                    {skills.length === 0 ? (
 
-                        <EmptyState
+                        <Card className="skills-empty-card">
 
-                            title={
-                                activeFilter === "ALL"
-                                    ? "No skills added yet"
-                                    : `No ${activeFilter.toLowerCase()} skills`
-                            }
+                            <Card.Body className="p-5">
 
-                            message={
-                                activeFilter === "ALL"
-                                    ? "Start tracking your developer journey by adding your first skill."
-                                    : "There are no skills matching the selected status."
-                            }
+                                <div className="skills-empty-icon">
 
-                            action={
-                                activeFilter === "ALL"
-                                    ? (
-                                        <Button
-                                            variant="primary"
-                                            onClick={
-                                                handleAddSkill
-                                            }
-                                        >
-                                            Add Your First Skill
-                                        </Button>
-                                    )
-                                    : null
-                            }
-                        />
+                                    <FaBookOpen />
+
+                                </div>
+
+
+                                <h4 className="skills-empty-title">
+                                    No skills found
+                                </h4>
+
+
+                                <p className="skills-empty-text">
+                                    {activeFilter === STATUS.ALL
+                                        ? "Start building your learning journey by adding your first skill."
+                                        : `You don't have any ${getStatusLabel(
+                                            activeFilter
+                                        ).toLowerCase()} skills yet.`}
+                                </p>
+
+
+                                <Button
+                                    variant="primary"
+                                    className="skills-empty-button"
+                                    onClick={
+                                        handleAddSkill
+                                    }
+                                >
+
+                                    <FaPlus className="me-2" />
+
+                                    Add Your First Skill
+
+                                </Button>
+
+                            </Card.Body>
+
+                        </Card>
 
                     ) : (
 
                         <Row className="g-4">
 
                             {skills.map(
-                                (skill) => (
+                                (skill) => {
 
-                                    <Col
-                                        key={
-                                            skill.id
-                                        }
-                                        xs={12}
-                                        md={6}
-                                        xl={4}
-                                    >
+                                    const isOverdue =
+                                        skill?.targetDate &&
+                                        skill?.status !==
+                                            STATUS.COMPLETED &&
+                                        skill.targetDate <
+                                            today;
 
-                                        <Card
-                                            className="
-                                                border-0
-                                                shadow-sm
-                                                h-100
-                                            "
+
+                                    return (
+
+                                        <Col
+                                            key={skill.id}
+                                            xs={12}
+                                            md={6}
+                                            xl={4}
                                         >
 
-                                            <Card.Body
-                                                className="
-                                                    d-flex
-                                                    flex-column
-                                                "
-                                            >
+                                            <Card className="skill-card h-100">
 
-                                                <div
-                                                    className="
-                                                        d-flex
-                                                        justify-content-between
-                                                        align-items-start
-                                                        gap-3
-                                                        mb-3
-                                                    "
-                                                >
+                                                <Card.Body className="p-4">
 
-                                                    <div>
+                                                    {/* CARD TOP */}
 
-                                                        <h5 className="fw-bold mb-1">
-                                                            {
-                                                                skill.name
+                                                    <div className="skill-card-top">
+
+                                                        <div className="skill-icon">
+
+                                                            {getStatusIcon(
+                                                                skill.status
+                                                            )}
+
+                                                        </div>
+
+
+                                                        <span
+                                                            className={
+                                                                `skill-status-badge skill-status-${String(
+                                                                    skill?.status ||
+                                                                    ""
+                                                                ).toLowerCase()}`
                                                             }
-                                                        </h5>
+                                                        >
 
-                                                        <small className="text-muted">
-                                                            Skill #
                                                             {
+                                                                getStatusLabel(
+                                                                    skill.status
+                                                                )
+                                                            }
+
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    {/* NAME */}
+
+                                                    <h3 className="skill-name">
+
+                                                        {skill?.name ||
+                                                            "Unnamed Skill"}
+
+                                                    </h3>
+
+
+                                                    <div className="skill-meta">
+
+                                                        <div className="skill-meta-item">
+
+                                                            <FaClock />
+
+                                                            <span>
+                                                                Target Date
+                                                            </span>
+
+                                                        </div>
+
+
+                                                        <div
+                                                            className={
+                                                                `skill-date ${
+                                                                    isOverdue
+                                                                        ? "overdue"
+                                                                        : ""
+                                                                }`
+                                                            }
+                                                        >
+
+                                                            {formatDate(
+                                                                skill?.targetDate
+                                                            )}
+
+                                                        </div>
+
+                                                    </div>
+
+
+                                                    {isOverdue && (
+
+                                                        <div className="skill-overdue">
+
+                                                            Target date has passed
+
+                                                        </div>
+
+                                                    )}
+
+
+                                                    {/* ACTIONS */}
+
+                                                    <div className="skill-actions">
+
+                                                        <Button
+                                                            variant="outline-primary"
+                                                            className="skill-edit-button"
+                                                            onClick={() =>
+                                                                handleEditSkill(
+                                                                    skill
+                                                                )
+                                                            }
+                                                        >
+
+                                                            <FaEdit className="me-2" />
+
+                                                            Edit
+
+                                                        </Button>
+
+
+                                                        <Button
+                                                            variant="outline-danger"
+                                                            className="skill-delete-button"
+                                                            disabled={
+                                                                deletingId ===
                                                                 skill.id
                                                             }
-                                                        </small>
-
-                                                    </div>
-
-
-                                                    <StatusBadge
-                                                        status={
-                                                            skill.status
-                                                        }
-                                                    />
-
-                                                </div>
-
-
-                                                <div className="mb-4">
-
-                                                    <div className="text-muted small mb-1">
-                                                        Target Date
-                                                    </div>
-
-                                                    <div className="fw-semibold">
-
-                                                        {
-                                                            formatDate(
-                                                                skill.targetDate
-                                                            )
-                                                        }
-
-                                                    </div>
-
-                                                </div>
-
-
-                                                <div
-                                                    className="
-                                                        mt-auto
-                                                        d-flex
-                                                        gap-2
-                                                    "
-                                                >
-
-                                                    <Button
-                                                        variant="outline-primary"
-                                                        size="sm"
-                                                        className="flex-grow-1"
-                                                        onClick={() =>
-                                                            handleEditSkill(
-                                                                skill
-                                                            )
-                                                        }
-                                                    >
-                                                        Edit
-                                                    </Button>
-
-
-                                                    <Button
-                                                        variant="outline-danger"
-                                                        size="sm"
-                                                        className="flex-grow-1"
-                                                        disabled={
-                                                            deletingId ===
-                                                            skill.id
-                                                        }
-                                                        onClick={() =>
-                                                            handleDelete(
-                                                                skill
-                                                            )
-                                                        }
-                                                    >
-
-                                                        {
-                                                            deletingId ===
-                                                                skill.id
-                                                                ? (
-                                                                    <>
-                                                                        <Spinner
-                                                                            animation="border"
-                                                                            size="sm"
-                                                                            className="me-1"
-                                                                        />
-
-                                                                        Deleting...
-                                                                    </>
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    skill
                                                                 )
-                                                                : (
-                                                                    "Delete"
-                                                                )
-                                                        }
+                                                            }
+                                                        >
 
-                                                    </Button>
+                                                            {deletingId ===
+                                                            skill.id ? (
 
-                                                </div>
+                                                                <>
 
-                                            </Card.Body>
+                                                                    <Spinner
+                                                                        animation="border"
+                                                                        size="sm"
+                                                                        className="me-2"
+                                                                    />
 
-                                        </Card>
+                                                                    Deleting...
 
-                                    </Col>
-                                )
+                                                                </>
+
+                                                            ) : (
+
+                                                                <>
+
+                                                                    <FaTrash className="me-2" />
+
+                                                                    Delete
+
+                                                                </>
+
+                                                            )}
+
+                                                        </Button>
+
+                                                    </div>
+
+                                                </Card.Body>
+
+                                            </Card>
+
+                                        </Col>
+
+                                    );
+
+                                }
                             )}
 
                         </Row>
+
                     )}
 
                 </Container>
 
             </main>
 
+
+            {/* =========================================================
+                ADD / EDIT MODAL
+            ========================================================= */}
+
             <Modal
                 show={showModal}
                 onHide={handleCloseModal}
                 centered
                 backdrop="static"
+                className="skills-modal"
             >
 
                 <Modal.Header
                     closeButton={!saving}
+                    className="skills-modal-header"
                 >
 
-                    <Modal.Title className="fw-bold">
+                    <div>
 
-                        {
-                            editingSkill
+                        <Modal.Title className="skills-modal-title">
+
+                            {editingSkill
                                 ? "Edit Skill"
-                                : "Add Skill"
-                        }
+                                : "Add New Skill"}
 
-                    </Modal.Title>
+                        </Modal.Title>
+
+                        <div className="skills-modal-subtitle">
+
+                            {editingSkill
+                                ? "Update your skill information."
+                                : "Add a technology or skill to your learning journey."}
+
+                        </div>
+
+                    </div>
 
                 </Modal.Header>
 
 
                 <Form
-                    onSubmit={
-                        handleSubmit
-                    }
+                    onSubmit={handleSubmit}
                 >
 
-                    <Modal.Body>
-                        <Form.Group
-                            className="mb-3"
-                        >
+                    <Modal.Body className="skills-modal-body">
 
-                            <Form.Label>
+
+                        {/* SKILL NAME */}
+
+                        <Form.Group className="mb-4">
+
+                            <Form.Label className="skills-form-label">
+
                                 Skill Name
+
                             </Form.Label>
+
 
                             <Form.Control
                                 type="text"
@@ -981,24 +1510,30 @@ const Skills = () => {
                                 maxLength={100}
                                 required
                                 disabled={saving}
+                                className="skills-form-control"
                             />
 
-                            <Form.Text
-                                className="text-muted"
-                            >
-                                Enter the technology or
-                                skill you are learning.
+
+                            <Form.Text className="skills-form-help">
+
+                                Enter the technology or skill you are
+                                currently learning.
+
                             </Form.Text>
 
                         </Form.Group>
 
-                        <Form.Group
-                            className="mb-3"
-                        >
 
-                            <Form.Label>
+                        {/* STATUS */}
+
+                        <Form.Group className="mb-4">
+
+                            <Form.Label className="skills-form-label">
+
                                 Status
+
                             </Form.Label>
+
 
                             <Form.Select
                                 name="status"
@@ -1010,6 +1545,7 @@ const Skills = () => {
                                 }
                                 required
                                 disabled={saving}
+                                className="skills-form-control"
                             >
 
                                 <option value="LEARNING">
@@ -1029,11 +1565,16 @@ const Skills = () => {
                         </Form.Group>
 
 
+                        {/* TARGET DATE */}
+
                         <Form.Group>
 
-                            <Form.Label>
+                            <Form.Label className="skills-form-label">
+
                                 Target Date
+
                             </Form.Label>
+
 
                             <Form.Control
                                 type="date"
@@ -1046,59 +1587,71 @@ const Skills = () => {
                                     handleChange
                                 }
                                 disabled={saving}
+                                className="skills-form-control"
                             />
 
-                            <Form.Text
-                                className="text-muted"
-                            >
-                                Optional. You cannot select
-                                a date in the past.
+
+                            <Form.Text className="skills-form-help">
+
+                                Optional. Choose when you want to
+                                complete this skill.
+
                             </Form.Text>
 
                         </Form.Group>
 
                     </Modal.Body>
 
-                    <Modal.Footer>
+
+                    <Modal.Footer className="skills-modal-footer">
 
                         <Button
-                            variant="secondary"
+                            variant="light"
+                            className="skills-modal-cancel"
                             onClick={
                                 handleCloseModal
                             }
                             disabled={saving}
                         >
+
                             Cancel
+
                         </Button>
 
 
                         <Button
                             variant="primary"
                             type="submit"
+                            className="skills-modal-save"
                             disabled={saving}
                         >
 
                             {saving ? (
 
                                 <>
+
                                     <Spinner
                                         animation="border"
                                         size="sm"
                                         className="me-2"
                                     />
 
-                                    {
-                                        editingSkill
-                                            ? "Updating..."
-                                            : "Adding..."
-                                    }
+                                    {editingSkill
+                                        ? "Updating..."
+                                        : "Adding..."}
+
                                 </>
 
                             ) : (
 
-                                editingSkill
-                                    ? "Update Skill"
-                                    : "Add Skill"
+                                <>
+
+                                    {editingSkill
+                                        ? "Update Skill"
+                                        : "Add Skill"}
+
+                                </>
+
                             )}
 
                         </Button>
@@ -1108,8 +1661,10 @@ const Skills = () => {
                 </Form>
 
             </Modal>
+
         </>
     );
-};
+}
+
 
 export default Skills;

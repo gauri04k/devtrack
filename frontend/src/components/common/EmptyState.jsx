@@ -5,13 +5,17 @@ const EmptyState = ({
     message = "There is nothing to display yet.",
     action = null,
 }) => {
+
     return (
         <Card className="border-0 shadow-sm">
+
             <Card.Body className="text-center py-5">
 
                 <div
                     className="mb-3 text-secondary"
-                    style={{ fontSize: "2.5rem" }}
+                    style={{
+                        fontSize: "2.5rem",
+                    }}
                 >
                     —
                 </div>
@@ -27,6 +31,7 @@ const EmptyState = ({
                 {action}
 
             </Card.Body>
+
         </Card>
     );
 };

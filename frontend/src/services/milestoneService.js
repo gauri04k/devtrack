@@ -5,7 +5,6 @@ const milestoneService = {
         const response = await axiosClient.get(
             `/api/projects/${projectId}/milestones`
         );
-
         return response.data;
     },
 
@@ -14,7 +13,6 @@ const milestoneService = {
             `/api/projects/${projectId}/milestones`,
             milestoneData
         );
-
         return response.data;
     },
 
@@ -23,7 +21,6 @@ const milestoneService = {
             `/api/milestones/${milestoneId}`,
             milestoneData
         );
-
         return response.data;
     },
 
@@ -31,7 +28,6 @@ const milestoneService = {
         const response = await axiosClient.delete(
             `/api/milestones/${milestoneId}`
         );
-
         return response.data;
     },
 };

@@ -1,9 +1,9 @@
-import {createContext,useContext,useEffect,useState,} from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import authService from "../services/authService";
 
 const AuthContext = createContext(null);
 
-export const AuthProvider = ({children,}) => {
+export const AuthProvider = ({ children }) => {
     const [auth, setAuth] = useState(() => {
         const storedAuth = localStorage.getItem("devtrack_auth");
 
@@ -14,9 +14,8 @@ export const AuthProvider = ({children,}) => {
         try {
             return JSON.parse(storedAuth);
         } catch (error) {
-            console.error("Invalid stored authentication:",error);
+            console.error("Invalid stored authentication:", error);
             localStorage.removeItem("devtrack_auth");
-
             return null;
         }
     });
@@ -26,13 +25,12 @@ export const AuthProvider = ({children,}) => {
 
     const login = async (credentials) => {
         setLoading(true);
+
         try {
             const response = await authService.login(credentials);
-            localStorage.setItem("devtrack_auth",JSON.stringify(response));
+            localStorage.setItem("devtrack_auth", JSON.stringify(response));
             setAuth(response);
-
             return response;
-
         } finally {
             setLoading(false);
         }
@@ -40,11 +38,10 @@ export const AuthProvider = ({children,}) => {
 
     const register = async (userData) => {
         setLoading(true);
-        try {
 
+        try {
             const response = await authService.register(userData);
             return response;
-
         } finally {
             setLoading(false);
         }
@@ -61,26 +58,35 @@ export const AuthProvider = ({children,}) => {
             setAuth(null);
         };
 
-        window.addEventListener("auth:logout",handleLogout);
+        window.addEventListener("auth:logout", handleLogout);
+
         return () => {
-            window.removeEventListener("auth:logout",handleLogout);
+            window.removeEventListener("auth:logout", handleLogout);
         };
     }, []);
 
-
     return (
         <AuthContext.Provider
-            value={{ auth, isAuthenticated, loading, login, register, logout,}}>
+            value={{
+                auth,
+                isAuthenticated,
+                loading,
+                login,
+                register,
+                logout,
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );
 };
-export const useAuth = () => {
 
+export const useAuth = () => {
     const context = useContext(AuthContext);
 
     if (!context) {
         throw new Error("useAuth must be used inside AuthProvider");
     }
+
     return context;
 };
