@@ -11,6 +11,7 @@ import Dashboard from "../pages/Dashboard";
 import Skills from "../pages/Skills";
 import Projects from "../pages/Projects";
 import DailyLogs from "../pages/DailyLogs";
+import Notes from "../pages/Notes";
 
 import ProtectedRoute from "./ProtectedRoute";
 
@@ -28,7 +29,7 @@ function AppRoutes() {
                     <Route path="/skills" element={<Skills />} />
                     <Route path="/projects" element={<Projects />} />
                     <Route path="/daily-logs" element={<DailyLogs />}
-    />
+                    />
 
                 </Route>
 
@@ -50,6 +51,11 @@ function AppRoutes() {
                             replace
                         />
                     }
+                />
+
+                <Route
+                    path="/notes"
+                    element={<Notes />}
                 />
 
             </Routes>

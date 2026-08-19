@@ -1,7 +1,7 @@
 import { Container, Nav, Navbar, Button } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 
-import { FaTachometerAlt, FaBook, FaProjectDiagram, FaHistory, FaSignOutAlt } from "react-icons/fa";
+import { FaTachometerAlt, FaBook, FaProjectDiagram, FaHistory, FaStickyNote, FaSignOutAlt } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
 
 function AppNavbar() {
@@ -44,6 +44,15 @@ function AppNavbar() {
                             <FaHistory className="me-2" />
                             Daily Logs
                         </Nav.Link>
+
+                        <Nav.Link
+                            as={Link}
+                            to="/notes"
+                        >
+                            <FaStickyNote className="me-2" />
+                            Notes
+                        </Nav.Link>
+                        
                     </Nav>
 
 
