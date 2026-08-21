@@ -1,110 +1,76 @@
 # DevTrack
 
-DevTrack is a Spring Boot-based personal developer progress tracker designed to help individuals manage their learning journey, projects, skills, and daily work logs in one place.
+DevTrack is a full-stack personal developer progress tracker. It combines a Spring Boot REST API with a React dashboard for managing skills, projects, milestones, daily logs, notes, and learning progress.
 
-## Overview
+## Features
 
-The application provides a simple API for tracking:
+- Register and sign in with JWT authentication
+- Dashboard with skill progress, active projects, weekly hours, and recent activity
+- Create, update, filter, and delete projects
+- Track project milestones and due dates
+- Manage skills, statuses, and target dates
+- Record daily work or study logs and view weekly summaries
+- Create and search personal notes
+- Explore the API through Swagger UI
 
-- Users and account management
-- Projects with status tracking
-- Skills with target dates and statuses
-- Daily logs for work, study, or development activities
-- Milestones for project progress tracking
-- Weekly summary of logged hours
+## Technology
 
-It follows a clean RESTful structure with DTOs, validation, and centralized exception handling.
-
-## Tech Stack
+### Backend
 
 - Java 17
 - Spring Boot 4.1.0
-- Spring MVC
-- Spring Data JPA
-- Hibernate
+- Spring MVC, Spring Data JPA, and Hibernate
+- Spring Security with JWT
 - MySQL
-- Maven
-- Lombok
-- Spring Validation
-- Springdoc OpenAPI / Swagger UI
+- Maven and Lombok
+- Springdoc OpenAPI
 
-## Main Features
+### Frontend
 
-### User Management
-- Create, read, update, and delete users
-- Email validation and password length checks
-
-### Project Management
-- Create projects for a specific user
-- Retrieve all projects or a single project by ID
-- Update or delete projects
-- Filter projects by status
-
-### Skill Management
-- Add skills with name, status, and target date
-- Retrieve skills by user
-- Update or delete skill entries
-- Filter skills by status
-
-### Daily Logs
-- Record daily work logs with topic, hours, notes, and date
-- Retrieve logs by user or by specific date
-- Get a weekly summary of logged hours
-
-### Milestones
-- Create and manage milestones for projects
-- Track milestone status and due dates
-
-## API Documentation
-
-Swagger UI is available at:
-
-- http://localhost:8080/swagger-ui/index.html
-
-OpenAPI JSON is available at:
-
-- http://localhost:8080/v3/api-docs
+- React 19
+- Vite
+- React Router
+- React Bootstrap and Bootstrap
+- Axios
+- Chart.js and React Icons
 
 ## Project Structure
 
-The application is organized into the following main packages:
-
-- controller: REST API endpoints
-- service: business logic
-- repository: database access
-- entity: JPA entities
-- dto: request and response objects
-- exception: centralized exception handling
-- enums: status definitions
+```text
+devtrack/
+├── src/                         # Spring Boot backend
+│   ├── main/java/com/devtrack/
+│   │   ├── controller/          # REST endpoints
+│   │   ├── service/             # Business logic
+│   │   ├── repository/          # Database access
+│   │   ├── entity/              # JPA entities
+│   │   ├── dto/                 # Request and response objects
+│   │   ├── security/            # JWT and security configuration
+│   │   └── exception/           # Centralized error handling
+│   └── main/resources/
+│       └── application.properties
+├── frontend/                    # React/Vite frontend
+│   └── src/
+│       ├── pages/               # Login, dashboard, projects, skills, logs, notes
+│       ├── services/             # API clients
+│       ├── components/           # Shared UI components
+│       └── routes/               # Public and protected routes
+└── pom.xml
+```
 
 ## Prerequisites
 
-Before running the project, make sure you have:
-
 - JDK 17 or newer
-- Maven 3.8+
-- MySQL server running
-- A database named devtrack_db
+- MySQL Server
+- Node.js 18 or newer and npm
 
-## Configuration
+The backend currently connects to MySQL on port `3307` using database `devtrack_db`, username `root`, and password `root`. Create the database first if your MySQL setup does not allow automatic database creation, or update `src/main/resources/application.properties` for your local credentials.
 
-Database settings are defined in src/main/resources/application.properties.
+## Run Locally
 
-Make sure to set the database password environment variable:
+### 1. Start the backend
 
-- DB_PASSWORD
-
-Example configuration:
-
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/devtrack_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Kolkata
-spring.datasource.username=root
-spring.datasource.password=${DB_PASSWORD}
-```
-
-## Running the Application
-
-From the project root, run:
+From the repository root:
 
 ```bash
 ./mvnw spring-boot:run
@@ -112,48 +78,85 @@ From the project root, run:
 
 On Windows:
 
-```bash
+```powershell
 mvnw.cmd spring-boot:run
 ```
 
-The application will start on:
+The API starts at `http://localhost:8080`.
 
-- http://localhost:8080
+### 2. Configure and start the frontend
 
-## Running Tests
+Open a second terminal in `frontend/`. Set the API URL before starting Vite. PowerShell:
+
+```powershell
+cd frontend
+$env:VITE_API_BASE_URL="http://localhost:8080"
+npm install
+npm run dev
+```
+
+Bash:
+
+```bash
+cd frontend
+export VITE_API_BASE_URL=http://localhost:8080
+npm install
+npm run dev
+```
+
+Open the local URL printed by Vite, usually `http://localhost:5173`. Register a user, then sign in to access the protected pages.
+
+For a persistent frontend configuration, create `frontend/.env.local`:
+
+```env
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+Do not commit environment files containing secrets.
+
+## Frontend Routes
+
+| Route | Access | Purpose |
+| --- | --- | --- |
+| `/login` | Public | Sign in |
+| `/register` | Public | Create an account |
+| `/dashboard` | Protected | View progress and activity |
+| `/skills` | Protected | Manage skills |
+| `/projects` | Protected | Manage projects |
+| `/projects/:projectId/milestones` | Protected | Manage project milestones |
+| `/daily-logs` | Protected | Manage daily logs |
+| `/notes` | Protected | Manage and search notes |
+
+## API Documentation
+
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
+Core API groups include `/api/auth`, `/api/users/{userId}/projects`, `/api/users/{userId}/skills`, `/api/users/{userId}/logs`, `/api/users/{userId}/notes`, `/api/projects/{projectId}/milestones`, and `/api/users/{userId}/dashboard`.
+
+## Development Commands
+
+Backend tests from the repository root:
 
 ```bash
 ./mvnw test
 ```
 
-## Sample API Endpoints
+Frontend commands from `frontend/`:
 
-- POST /api/users
-- GET /api/users
-- GET /api/users/{id}
-- POST /api/users/{userId}/projects
-- GET /api/users/{userId}/skills
-- POST /api/users/{userId}/logs
-- GET /api/users/{userId}/logs/weekly-summary
+```bash
+npm run dev      # Start Vite development server
+npm run build    # Create a production build
+npm run lint     # Run ESLint
+npm run preview  # Preview the production build
+```
 
-## Notes
+## Configuration Notes
 
-The project includes:
-
-- Request validation
-- DTO-based API design
-- Global exception handling
-- Swagger documentation for easier API exploration
-
-## Future Enhancements
-
-Possible improvements for later versions include:
-
-- Authentication and authorization
-- Dashboard analytics
-- Advanced reporting
-- Role-based access control
-- Frontend UI integration
+- Backend configuration lives in `src/main/resources/application.properties`.
+- The frontend reads the backend URL from `VITE_API_BASE_URL`.
+- The frontend stores the current authentication response in browser local storage under `devtrack_auth`.
+- Change the default JWT secret and database credentials before deploying outside local development.
 
 ## Author
 
