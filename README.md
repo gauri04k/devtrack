@@ -64,7 +64,7 @@ devtrack/
 - MySQL Server
 - Node.js 18 or newer and npm
 
-The backend currently connects to MySQL on port `3307` using database `devtrack_db`, username `root`, and password `root`. Create the database first if your MySQL setup does not allow automatic database creation, or update `src/main/resources/application.properties` for your local credentials.
+<!-- The backend currently connects to MySQL on port `3307` using database `devtrack_db`, username `root`, and password `root`. Create the database first if your MySQL setup does not allow automatic database creation, or update `src/main/resources/application.properties` for your local credentials. -->
 
 ## Run Locally
 
