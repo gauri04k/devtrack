@@ -16,6 +16,7 @@ import com.devtrack.exception.ResourceNotFoundException;
 import com.devtrack.mapper.ProjectMapper;
 import com.devtrack.repository.ProjectRepository;
 import com.devtrack.repository.UserRepository;
+import com.devtrack.security.CurrentUserService;
 import com.devtrack.service.ProjectService;
 
 @Service
@@ -24,13 +25,16 @@ public class ProjectServiceImpl implements ProjectService {
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     public ProjectServiceImpl(
             ProjectRepository projectRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            CurrentUserService currentUserService) {
 
         this.projectRepository = projectRepository;
         this.userRepository = userRepository;
+        this.currentUserService = currentUserService;
     }
 
     @Override
@@ -38,7 +42,8 @@ public class ProjectServiceImpl implements ProjectService {
             Long userId,
             ProjectRequest request) {
 
-        User user = userRepository.findById(userId)
+        User user = currentUserService.requireOwner(userId);
+        userRepository.findById(userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "User not found with id : " + userId));
@@ -66,7 +71,8 @@ public class ProjectServiceImpl implements ProjectService {
     public List<ProjectResponse> getAllProjects(
             Long userId) {
 
-        User user = userRepository.findById(userId)
+        User user = currentUserService.requireOwner(userId);
+        userRepository.findById(userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "User not found with id : " + userId));
@@ -83,7 +89,8 @@ public class ProjectServiceImpl implements ProjectService {
             Long userId,
             Long projectId) {
 
-        User user = userRepository.findById(userId)
+        User user = currentUserService.requireOwner(userId);
+        userRepository.findById(userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "User not found with id : " + userId));
@@ -107,7 +114,8 @@ public class ProjectServiceImpl implements ProjectService {
             Long projectId,
             ProjectRequest request) {
 
-        User user = userRepository.findById(userId)
+        User user = currentUserService.requireOwner(userId);
+        userRepository.findById(userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "User not found with id : " + userId));
@@ -160,7 +168,8 @@ public class ProjectServiceImpl implements ProjectService {
             Long userId,
             Long projectId) {
 
-        User user = userRepository.findById(userId)
+        User user = currentUserService.requireOwner(userId);
+        userRepository.findById(userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "User not found with id : " + userId));
@@ -184,7 +193,8 @@ public class ProjectServiceImpl implements ProjectService {
             Long userId,
             ProjectStatus status) {
 
-        User user = userRepository.findById(userId)
+        User user = currentUserService.requireOwner(userId);
+        userRepository.findById(userId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "User not found with id : " + userId));

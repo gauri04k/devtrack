@@ -20,6 +20,7 @@ import com.devtrack.repository.DailyLogRepository;
 import com.devtrack.repository.ProjectRepository;
 import com.devtrack.repository.SkillRepository;
 import com.devtrack.repository.UserRepository;
+import com.devtrack.security.CurrentUserService;
 import com.devtrack.service.DashboardService;
 
 import lombok.RequiredArgsConstructor;
@@ -36,11 +37,13 @@ public class DashboardServiceImpl implements DashboardService {
     private final DailyLogRepository dailyLogRepository;
 
     private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     @Override
     @Transactional(readOnly = true)
     public DashboardResponse getDashboard(Long userId) {
 
+        currentUserService.requireOwner(userId);
         userRepository.findById(userId)
                 .orElseThrow(() ->
                         new RuntimeException(

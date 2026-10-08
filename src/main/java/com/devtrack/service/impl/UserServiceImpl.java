@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.devtrack.dto.request.UserRequest;
@@ -12,15 +13,22 @@ import com.devtrack.entity.User;
 import com.devtrack.exception.DuplicateEmailException;
 import com.devtrack.exception.ResourceNotFoundException;
 import com.devtrack.repository.UserRepository;
+import com.devtrack.security.CurrentUserService;
 import com.devtrack.service.UserService;
 
 @Service
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final CurrentUserService currentUserService;
 
-    public UserServiceImpl(UserRepository userRepository) {
+    public UserServiceImpl(UserRepository userRepository,
+                          PasswordEncoder passwordEncoder,
+                          CurrentUserService currentUserService) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.currentUserService = currentUserService;
     }
 
     @Override
@@ -34,7 +42,7 @@ public class UserServiceImpl implements UserService {
 
         user.setName(request.getName());
         user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setCreatedAt(LocalDateTime.now());
 
         User savedUser = userRepository.save(user);
@@ -52,42 +60,27 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<UserResponse> getAllUsers() {
 
-        List<User> users = userRepository.findAll();
+        User currentUser = currentUserService.getCurrentUser();
         List<UserResponse> responses = new ArrayList<>();
-
-        for (User user : users) {
-
-            UserResponse response = new UserResponse();
-
-            response.setId(user.getId());
-            response.setName(user.getName());
-            response.setEmail(user.getEmail());
-            response.setCreatedAt(user.getCreatedAt());
-
-            responses.add(response);
-        }
-
+        responses.add(mapToResponse(currentUser));
         return responses;
     }
 
     @Override
     public UserResponse getUserById(Long id) {
 
+        User currentUser = currentUserService.requireOwner(id);
+
         User user = userRepository.findById(id).orElseThrow(() ->
                         new ResourceNotFoundException("User not found with id : " + id));
 
-        UserResponse response = new UserResponse();
-
-        response.setId(user.getId());
-        response.setName(user.getName());
-        response.setEmail(user.getEmail());
-        response.setCreatedAt(user.getCreatedAt());
-
-        return response;
+        return mapToResponse(user);
     }
 
     @Override
     public UserResponse updateUser(Long id, UserRequest request) {
+
+        User currentUser = currentUserService.requireOwner(id);
 
         User user = userRepository.findById(id).orElseThrow(() ->
                         new ResourceNotFoundException("User not found with id : " + id));
@@ -100,27 +93,31 @@ public class UserServiceImpl implements UserService {
 
         user.setName(request.getName());
         user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         User updatedUser = userRepository.save(user);
 
-        UserResponse response = new UserResponse();
-
-        response.setId(updatedUser.getId());
-        response.setName(updatedUser.getName());
-        response.setEmail(updatedUser.getEmail());
-        response.setCreatedAt(updatedUser.getCreatedAt());
-
-        return response;
+        return mapToResponse(updatedUser);
     }
 
     @Override
     public void deleteUser(Long id) {
 
+        User currentUser = currentUserService.requireOwner(id);
+
         User user = userRepository.findById(id).orElseThrow(() ->
                         new ResourceNotFoundException("User not found with id : " + id));
 
         userRepository.delete(user);
+    }
+
+    private UserResponse mapToResponse(User user) {
+        UserResponse response = new UserResponse();
+        response.setId(user.getId());
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setCreatedAt(user.getCreatedAt());
+        return response;
     }
 
 }

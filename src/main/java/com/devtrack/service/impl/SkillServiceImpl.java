@@ -15,6 +15,7 @@ import com.devtrack.exception.ResourceNotFoundException;
 import com.devtrack.mapper.SkillMapper;
 import com.devtrack.repository.SkillRepository;
 import com.devtrack.repository.UserRepository;
+import com.devtrack.security.CurrentUserService;
 import com.devtrack.service.SkillService;
 
 @Service
@@ -24,13 +25,16 @@ public class SkillServiceImpl implements SkillService {
     private final SkillRepository skillRepository;
 
     private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     public SkillServiceImpl(
             SkillRepository skillRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            CurrentUserService currentUserService
     ) {
         this.skillRepository = skillRepository;
         this.userRepository = userRepository;
+        this.currentUserService = currentUserService;
     }
 
     @Override
@@ -39,7 +43,8 @@ public class SkillServiceImpl implements SkillService {
             SkillRequest request
     ) {
 
-        User user = getUser(userId);
+        User user = currentUserService.requireOwner(userId);
+        getUser(userId);
 
         String skillName =
                 normalizeSkillName(request.getName());
@@ -76,7 +81,8 @@ public class SkillServiceImpl implements SkillService {
             Long userId
     ) {
 
-        User user = getUser(userId);
+        User user = currentUserService.requireOwner(userId);
+        getUser(userId);
 
         return skillRepository
                 .findByUserOrderByIdDesc(user)
@@ -92,7 +98,8 @@ public class SkillServiceImpl implements SkillService {
             Long skillId
     ) {
 
-        User user = getUser(userId);
+        User user = currentUserService.requireOwner(userId);
+        getUser(userId);
 
         Skill skill =
                 skillRepository
@@ -118,7 +125,8 @@ public class SkillServiceImpl implements SkillService {
             SkillRequest request
     ) {
 
-        User user = getUser(userId);
+        User user = currentUserService.requireOwner(userId);
+        getUser(userId);
 
         Skill skill =
                 skillRepository
@@ -182,7 +190,8 @@ public class SkillServiceImpl implements SkillService {
             Long skillId
     ) {
 
-        User user = getUser(userId);
+        User user = currentUserService.requireOwner(userId);
+        getUser(userId);
 
         Skill skill =
                 skillRepository
@@ -207,7 +216,8 @@ public class SkillServiceImpl implements SkillService {
             SkillStatus status
     ) {
 
-        User user = getUser(userId);
+        User user = currentUserService.requireOwner(userId);
+        getUser(userId);
 
         return skillRepository
                 .findByUserAndStatusOrderByIdDesc(

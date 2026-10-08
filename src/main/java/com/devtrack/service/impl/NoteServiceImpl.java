@@ -14,6 +14,7 @@ import com.devtrack.entity.User;
 import com.devtrack.exception.ResourceNotFoundException;
 import com.devtrack.repository.NoteRepository;
 import com.devtrack.repository.UserRepository;
+import com.devtrack.security.CurrentUserService;
 import com.devtrack.service.NoteService;
 
 import lombok.RequiredArgsConstructor;
@@ -25,11 +26,13 @@ public class NoteServiceImpl implements NoteService {
 
     private final NoteRepository noteRepository;
     private final UserRepository userRepository;
+    private final CurrentUserService currentUserService;
 
     @Override
     public NoteResponse createNote(Long userId,NoteRequest request) {
 
-        User user = userRepository.findById(userId).orElseThrow(() ->new ResourceNotFoundException(
+        User user = currentUserService.requireOwner(userId);
+        userRepository.findById(userId).orElseThrow(() ->new ResourceNotFoundException(
                                 "User not found with id : " + userId
                         ));
 
@@ -49,6 +52,7 @@ public class NoteServiceImpl implements NoteService {
     @Transactional(readOnly = true)
     public Page<NoteResponse> getAllNotes(Long userId,Pageable pageable) {
 
+        currentUserService.requireOwner(userId);
         userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException(
                                 "User not found with id : " + userId
                         ));
@@ -60,6 +64,7 @@ public class NoteServiceImpl implements NoteService {
     @Transactional(readOnly = true)
     public NoteResponse getNoteById(Long userId,Long noteId) {
 
+        currentUserService.requireOwner(userId);
         Note note = noteRepository.findByIdAndUserId(noteId, userId).orElseThrow(() -> new ResourceNotFoundException(
                                 "Note not found with id : " + noteId
                         ));
@@ -70,6 +75,7 @@ public class NoteServiceImpl implements NoteService {
     @Override
     public NoteResponse updateNote(Long userId,Long noteId,NoteRequest request) {
 
+        currentUserService.requireOwner(userId);
         Note note = noteRepository.findByIdAndUserId(noteId, userId).orElseThrow(() ->
                         new ResourceNotFoundException("Note not found with id : " + noteId));
 
@@ -84,6 +90,7 @@ public class NoteServiceImpl implements NoteService {
     @Override
     public void deleteNote(Long userId,Long noteId) {
 
+        currentUserService.requireOwner(userId);
         Note note = noteRepository.findByIdAndUserId(noteId, userId).orElseThrow(() -> new ResourceNotFoundException(
                                 "Note not found with id : " + noteId
                         ));
@@ -95,6 +102,7 @@ public class NoteServiceImpl implements NoteService {
     @Transactional(readOnly = true)
     public Page<NoteResponse> searchNotes(Long userId,String keyword,Pageable pageable) {
 
+        currentUserService.requireOwner(userId);
         userRepository.findById(userId).orElseThrow(() ->new ResourceNotFoundException(
                                 "User not found with id : " + userId
                         ));
