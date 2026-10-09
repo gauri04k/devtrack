@@ -23,9 +23,10 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final CurrentUserService currentUserService;
 
-    public UserServiceImpl(UserRepository userRepository,
-                          PasswordEncoder passwordEncoder,
-                          CurrentUserService currentUserService) {
+    public UserServiceImpl(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            CurrentUserService currentUserService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.currentUserService = currentUserService;
@@ -39,7 +40,6 @@ public class UserServiceImpl implements UserService {
         }
 
         User user = new User();
-
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -47,32 +47,28 @@ public class UserServiceImpl implements UserService {
 
         User savedUser = userRepository.save(user);
 
-        UserResponse response = new UserResponse();
-
-        response.setId(savedUser.getId());
-        response.setName(savedUser.getName());
-        response.setEmail(savedUser.getEmail());
-        response.setCreatedAt(savedUser.getCreatedAt());
-
-        return response;
+        return mapToResponse(savedUser);
     }
 
     @Override
     public List<UserResponse> getAllUsers() {
 
         User currentUser = currentUserService.getCurrentUser();
+
         List<UserResponse> responses = new ArrayList<>();
         responses.add(mapToResponse(currentUser));
+
         return responses;
     }
 
     @Override
     public UserResponse getUserById(Long id) {
 
-        User currentUser = currentUserService.requireOwner(id);
+        currentUserService.requireOwner(id);
 
-        User user = userRepository.findById(id).orElseThrow(() ->
-                        new ResourceNotFoundException("User not found with id : " + id));
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with id : " + id));
 
         return mapToResponse(user);
     }
@@ -80,14 +76,14 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponse updateUser(Long id, UserRequest request) {
 
-        User currentUser = currentUserService.requireOwner(id);
+        currentUserService.requireOwner(id);
 
-        User user = userRepository.findById(id).orElseThrow(() ->
-                        new ResourceNotFoundException("User not found with id : " + id));
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with id : " + id));
 
         if (!user.getEmail().equals(request.getEmail())
                 && userRepository.existsByEmail(request.getEmail())) {
-
             throw new DuplicateEmailException("Email already exists");
         }
 
@@ -103,21 +99,23 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteUser(Long id) {
 
-        User currentUser = currentUserService.requireOwner(id);
+        currentUserService.requireOwner(id);
 
-        User user = userRepository.findById(id).orElseThrow(() ->
-                        new ResourceNotFoundException("User not found with id : " + id));
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found with id : " + id));
 
         userRepository.delete(user);
     }
 
     private UserResponse mapToResponse(User user) {
+
         UserResponse response = new UserResponse();
         response.setId(user.getId());
         response.setName(user.getName());
         response.setEmail(user.getEmail());
         response.setCreatedAt(user.getCreatedAt());
+
         return response;
     }
-
 }

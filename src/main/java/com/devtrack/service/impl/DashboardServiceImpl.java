@@ -19,7 +19,6 @@ import com.devtrack.enums.SkillStatus;
 import com.devtrack.repository.DailyLogRepository;
 import com.devtrack.repository.ProjectRepository;
 import com.devtrack.repository.SkillRepository;
-import com.devtrack.repository.UserRepository;
 import com.devtrack.security.CurrentUserService;
 import com.devtrack.service.DashboardService;
 
@@ -31,12 +30,8 @@ import lombok.RequiredArgsConstructor;
 public class DashboardServiceImpl implements DashboardService {
 
     private final SkillRepository skillRepository;
-
     private final ProjectRepository projectRepository;
-
     private final DailyLogRepository dailyLogRepository;
-
-    private final UserRepository userRepository;
     private final CurrentUserService currentUserService;
 
     @Override
@@ -44,48 +39,38 @@ public class DashboardServiceImpl implements DashboardService {
     public DashboardResponse getDashboard(Long userId) {
 
         currentUserService.requireOwner(userId);
-        userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "User not found with id : " + userId
-                        )
-                );
 
         long learningSkills = skillRepository.countByUserIdAndStatus(
-                        userId,
-                        SkillStatus.LEARNING
-                );
+                userId,
+                SkillStatus.LEARNING
+        );
 
-        long completedSkills =
-                skillRepository.countByUserIdAndStatus(
-                        userId,
-                        SkillStatus.COMPLETED
-                );
+        long completedSkills = skillRepository.countByUserIdAndStatus(
+                userId,
+                SkillStatus.COMPLETED
+        );
 
-        long pausedSkills =
-                skillRepository.countByUserIdAndStatus(
-                        userId,
-                        SkillStatus.PAUSED
-                );
+        long pausedSkills = skillRepository.countByUserIdAndStatus(
+                userId,
+                SkillStatus.PAUSED
+        );
 
         LocalDate endDate = LocalDate.now();
-
         LocalDate startDate = endDate.minusDays(6);
 
-        BigDecimal weeklyHours =
-                dailyLogRepository.getWeeklyHours(
-                        userId,
-                        startDate,
-                        endDate
-                );
+        BigDecimal weeklyHours = dailyLogRepository.getWeeklyHours(
+                userId,
+                startDate,
+                endDate
+        );
 
         if (weeklyHours == null) {
             weeklyHours = BigDecimal.ZERO;
         }
 
-        long activeProjects = projectRepository.countActiveProjectsByUserId(userId);
+        long activeProjects =
+                projectRepository.countActiveProjectsByUserId(userId);
 
-        
         List<RecentActivityResponse> recentActivity =
                 dailyLogRepository
                         .findTop5ByUserIdOrderByLogDateDescIdDesc(userId)
@@ -93,16 +78,10 @@ public class DashboardServiceImpl implements DashboardService {
                         .map(this::mapToRecentActivity)
                         .collect(Collectors.toList());
 
-       
         List<WeeklyActivityResponse> weeklyActivity =
-                buildWeeklyActivity(
-                        userId,
-                        startDate,
-                        endDate
-                );
+                buildWeeklyActivity(userId, startDate, endDate);
 
         return DashboardResponse.builder()
-
                 .learningSkills(learningSkills)
                 .completedSkills(completedSkills)
                 .pausedSkills(pausedSkills)
@@ -119,16 +98,12 @@ public class DashboardServiceImpl implements DashboardService {
             LocalDate endDate
     ) {
 
-        List<DailyLog> logs =
-                dailyLogRepository.findWeeklyLogs(
-                        userId,
-                        startDate,
-                        endDate
-                );
+        List<DailyLog> logs = dailyLogRepository.findWeeklyLogs(
+                userId,
+                startDate,
+                endDate
+        );
 
-        /*
-         * Group all logs by date.
-         */
         Map<LocalDate, BigDecimal> hoursByDate =
                 logs.stream()
                         .collect(Collectors.groupingBy(
@@ -141,18 +116,15 @@ public class DashboardServiceImpl implements DashboardService {
                                 )
                         ));
 
-        List<WeeklyActivityResponse> weeklyActivity =
-                new ArrayList<>();
+        List<WeeklyActivityResponse> weeklyActivity = new ArrayList<>();
 
         LocalDate currentDate = startDate;
 
         while (!currentDate.isAfter(endDate)) {
-
-            BigDecimal hours =
-                    hoursByDate.getOrDefault(
-                            currentDate,
-                            BigDecimal.ZERO
-                    );
+            BigDecimal hours = hoursByDate.getOrDefault(
+                    currentDate,
+                    BigDecimal.ZERO
+            );
 
             weeklyActivity.add(
                     WeeklyActivityResponse.builder()
