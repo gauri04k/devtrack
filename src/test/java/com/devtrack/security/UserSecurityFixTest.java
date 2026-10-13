@@ -1,6 +1,7 @@
 package com.devtrack.security;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,68 +32,122 @@ import com.devtrack.service.impl.UserServiceImpl;
 @ExtendWith(MockitoExtension.class)
 class UserSecurityFixTest {
 
-    @Mock
-    private UserRepository userRepository;
+@Mock
+private UserRepository userRepository;
 
-    @InjectMocks
-    private CurrentUserService currentUserService;
+@InjectMocks
+private CurrentUserService currentUserService;
 
-    @AfterEach
-    void clearSecurityContext() {
-        SecurityContextHolder.clearContext();
-    }
+@AfterEach
+void clearSecurityContext() {
+    SecurityContextHolder.clearContext();
+}
 
-    @Test
-    void saveUserHashesPasswordBeforePersisting() {
-        when(userRepository.existsByEmail("user@example.com")).thenReturn(false);
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-            User user = invocation.getArgument(0);
-            user.setId(101L);
-            return user;
-        });
+@Test
+void saveUserHashesPasswordBeforePersisting() {
+    when(userRepository.existsByEmail("user@example.com"))
+            .thenReturn(false);
 
-        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        UserServiceImpl service = new UserServiceImpl(userRepository, passwordEncoder, new CurrentUserService(userRepository));
+    when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+        User user = invocation.getArgument(0);
+        user.setId(101L);
+        return user;
+    });
 
-        UserRequest request = new UserRequest();
-        request.setName("Alice");
-        request.setEmail("user@example.com");
-        request.setPassword("strongPassword123");
+    PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
-        service.saveUser(request);
+    UserServiceImpl service = new UserServiceImpl(
+            userRepository,
+            passwordEncoder,
+            new CurrentUserService(userRepository)
+    );
 
-        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(captor.capture());
+    UserRequest request = new UserRequest();
+    request.setName("Alice");
+    request.setEmail("user@example.com");
+    request.setPassword("strongPassword123");
 
-        User savedUser = captor.getValue();
-        assertNotEquals("strongPassword123", savedUser.getPassword());
-        assertTrue(passwordEncoder.matches("strongPassword123", savedUser.getPassword()));
-    }
+    service.saveUser(request);
 
-    @Test
-    void updateUserRejectsRequestsForAnotherUser() {
-        User currentUser = new User();
-        currentUser.setId(7L);
-        currentUser.setEmail("owner@example.com");
+    ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+    verify(userRepository).save(captor.capture());
 
-        when(userRepository.findByEmail("owner@example.com")).thenReturn(Optional.of(currentUser));
+    User savedUser = captor.getValue();
 
-        SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(
-                        "owner@example.com",
-                        "secret123",
-                        Collections.singletonList(() -> "USER")
-                )
-        );
+    assertNotEquals("strongPassword123", savedUser.getPassword());
+    assertTrue(
+            passwordEncoder.matches(
+                    "strongPassword123",
+                    savedUser.getPassword()
+            )
+    );
+}
 
-        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-        UserServiceImpl service = new UserServiceImpl(userRepository, passwordEncoder, new CurrentUserService(userRepository));
+@Test
+void updateUserRejectsRequestsForAnotherUser() {
+    User currentUser = new User();
+    currentUser.setId(7L);
+    currentUser.setEmail("owner@example.com");
 
-        UserRequest request = new UserRequest();
-        request.setName("Owner");
-        request.setEmail("owner@example.com");
-        request.setPassword("newStrongPass456");
+    when(userRepository.findByEmail("owner@example.com"))
+            .thenReturn(Optional.of(currentUser));
 
-        assertThrows(AccessDeniedException.class, () -> service.updateUser(99L, request));
-    }
+    SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                    "owner@example.com",
+                    "secret123",
+                    Collections.singletonList(() -> "USER")
+            )
+    );
+
+    PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    UserServiceImpl service = new UserServiceImpl(
+            userRepository,
+            passwordEncoder,
+            new CurrentUserService(userRepository)
+    );
+
+    UserRequest request = new UserRequest();
+    request.setName("Owner");
+    request.setEmail("owner@example.com");
+    request.setPassword("newStrongPass456");
+
+    assertThrows(
+            AccessDeniedException.class,
+            () -> service.updateUser(99L, request)
+    );
+}
+
+@Test
+void unauthenticatedUserIsRejected() {
+    SecurityContextHolder.clearContext();
+
+    assertThrows(
+            AccessDeniedException.class,
+            () -> currentUserService.getCurrentUser()
+    );
+}
+
+@Test
+void currentUserCanAccessTheirOwnUserId() {
+    User currentUser = new User();
+    currentUser.setId(7L);
+    currentUser.setEmail("owner@example.com");
+
+    when(userRepository.findByEmail("owner@example.com"))
+            .thenReturn(Optional.of(currentUser));
+
+    SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                    "owner@example.com",
+                    "secret123",
+                    Collections.singletonList(() -> "USER")
+            )
+    );
+
+    User result = currentUserService.requireOwner(7L);
+
+    assertSame(currentUser, result);
+}
 }
