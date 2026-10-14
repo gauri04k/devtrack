@@ -150,4 +150,27 @@ void currentUserCanAccessTheirOwnUserId() {
 
     assertSame(currentUser, result);
 }
+
+@Test
+void currentUserCannotAccessAnotherUsersId() {
+    User currentUser = new User();
+    currentUser.setId(7L);
+    currentUser.setEmail("owner@example.com");
+
+    when(userRepository.findByEmail("owner@example.com"))
+            .thenReturn(Optional.of(currentUser));
+
+    SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken(
+                    "owner@example.com",
+                    "secret123",
+                    Collections.singletonList(() -> "USER")
+            )
+    );
+
+    assertThrows(
+            AccessDeniedException.class,
+            () -> currentUserService.requireOwner(99L)
+    );
+}
 }
