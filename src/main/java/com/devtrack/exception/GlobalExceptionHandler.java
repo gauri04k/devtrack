@@ -6,14 +6,12 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(
             MethodArgumentNotValidException ex) {
@@ -104,37 +102,15 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
-    // Handle authorization failures with HTTP 403 Forbidden
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Map<String, Object>> handleAccessDenied(
-            AccessDeniedException ex) {
-
-        Map<String, Object> response = new HashMap<>();
-
-        response.put("timestamp", LocalDateTime.now());
-        response.put("status", 403);
-        response.put("error", "Forbidden");
-        response.put(
-                "message",
-                "You are not allowed to access this resource."
-        );
-
-        return ResponseEntity
-                .status(HttpStatus.FORBIDDEN)
-                .body(response);
-    }
-
-    // Handle unexpected server errors
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneralException(
-            Exception ex) {
+    public ResponseEntity<Map<String, Object>> handleGeneralException(Exception ex) {
 
         Map<String, Object> response = new HashMap<>();
 
         response.put("timestamp", LocalDateTime.now());
         response.put("status", 500);
         response.put("error", "Internal Server Error");
-        response.put("message", "An unexpected error occurred.");
+        response.put( "message","An unexpected error occurred.");
 
         return ResponseEntity
                 .status(HttpStatus.INTERNAL_SERVER_ERROR)

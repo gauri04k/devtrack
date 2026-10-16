@@ -15,36 +15,29 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class CurrentUserService {
 
+    private final UserRepository userRepository;
 
-private final UserRepository userRepository;
+    public User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-public User getCurrentUser() {
-    Authentication authentication =
-            SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            throw new AccessDeniedException("Authentication is required");
+        }
 
-    if (authentication == null
-            || !authentication.isAuthenticated()
-            || authentication instanceof AnonymousAuthenticationToken) {
-        throw new AccessDeniedException("Authentication is required");
+        String email = authentication.getName();
+
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new AccessDeniedException("Authenticated user not found"));
     }
 
-    String email = authentication.getName();
+    public User requireOwner(Long userId) {
+        User currentUser = getCurrentUser();
 
-    return userRepository.findByEmail(email)
-            .orElseThrow(() ->
-                    new AccessDeniedException("Authenticated user not found"));
-}
+        if (!currentUser.getId().equals(userId)) {
+            throw new AccessDeniedException("You are not allowed to access this user's resources");
+        }
 
-public User requireOwner(Long userId) {
-    User currentUser = getCurrentUser();
-
-    if (!java.util.Objects.equals(currentUser.getId(), userId)) {
-        throw new AccessDeniedException(
-                "You are not allowed to access this user's resources");
+        return currentUser;
     }
-
-    return currentUser;
-}
-
-
 }

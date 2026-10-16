@@ -33,7 +33,9 @@ public class DailyLogServiceImpl implements DailyLogService {
     private final CurrentUserService currentUserService;
 
     private User requireOwnedUser(Long userId) {
-        return currentUserService.requireOwner(userId);
+        User currentUser = currentUserService.requireOwner(userId);
+        return userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id : " + userId));
     }
 
     @Override
