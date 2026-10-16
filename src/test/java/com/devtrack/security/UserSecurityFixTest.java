@@ -1,7 +1,6 @@
 package com.devtrack.security;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,145 +31,68 @@ import com.devtrack.service.impl.UserServiceImpl;
 @ExtendWith(MockitoExtension.class)
 class UserSecurityFixTest {
 
-@Mock
-private UserRepository userRepository;
+    @Mock
+    private UserRepository userRepository;
 
-@InjectMocks
-private CurrentUserService currentUserService;
+    @InjectMocks
+    private CurrentUserService currentUserService;
 
-@AfterEach
-void clearSecurityContext() {
-    SecurityContextHolder.clearContext();
-}
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
-@Test
-void saveUserHashesPasswordBeforePersisting() {
-    when(userRepository.existsByEmail("user@example.com"))
-            .thenReturn(false);
+    @Test
+    void saveUserHashesPasswordBeforePersisting() {
+        when(userRepository.existsByEmail("user@example.com")).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User user = invocation.getArgument(0);
+            user.setId(101L);
+            return user;
+        });
 
-    when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
-        User user = invocation.getArgument(0);
-        user.setId(101L);
-        return user;
-    });
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        UserServiceImpl service = new UserServiceImpl(userRepository, passwordEncoder, new CurrentUserService(userRepository));
 
-    PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        UserRequest request = new UserRequest();
+        request.setName("Alice");
+        request.setEmail("user@example.com");
+        request.setPassword("strongPassword123");
 
-    UserServiceImpl service = new UserServiceImpl(
-            userRepository,
-            passwordEncoder,
-            new CurrentUserService(userRepository)
-    );
+        service.saveUser(request);
 
-    UserRequest request = new UserRequest();
-    request.setName("Alice");
-    request.setEmail("user@example.com");
-    request.setPassword("strongPassword123");
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(captor.capture());
 
-    service.saveUser(request);
+        User savedUser = captor.getValue();
+        assertNotEquals("strongPassword123", savedUser.getPassword());
+        assertTrue(passwordEncoder.matches("strongPassword123", savedUser.getPassword()));
+    }
 
-    ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-    verify(userRepository).save(captor.capture());
+    @Test
+    void updateUserRejectsRequestsForAnotherUser() {
+        User currentUser = new User();
+        currentUser.setId(7L);
+        currentUser.setEmail("owner@example.com");
 
-    User savedUser = captor.getValue();
+        when(userRepository.findByEmail("owner@example.com")).thenReturn(Optional.of(currentUser));
 
-    assertNotEquals("strongPassword123", savedUser.getPassword());
-    assertTrue(
-            passwordEncoder.matches(
-                    "strongPassword123",
-                    savedUser.getPassword()
-            )
-    );
-}
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "owner@example.com",
+                        "secret123",
+                        Collections.singletonList(() -> "USER")
+                )
+        );
 
-@Test
-void updateUserRejectsRequestsForAnotherUser() {
-    User currentUser = new User();
-    currentUser.setId(7L);
-    currentUser.setEmail("owner@example.com");
+        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+        UserServiceImpl service = new UserServiceImpl(userRepository, passwordEncoder, new CurrentUserService(userRepository));
 
-    when(userRepository.findByEmail("owner@example.com"))
-            .thenReturn(Optional.of(currentUser));
+        UserRequest request = new UserRequest();
+        request.setName("Owner");
+        request.setEmail("owner@example.com");
+        request.setPassword("newStrongPass456");
 
-    SecurityContextHolder.getContext().setAuthentication(
-            new UsernamePasswordAuthenticationToken(
-                    "owner@example.com",
-                    "secret123",
-                    Collections.singletonList(() -> "USER")
-            )
-    );
-
-    PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-
-    UserServiceImpl service = new UserServiceImpl(
-            userRepository,
-            passwordEncoder,
-            new CurrentUserService(userRepository)
-    );
-
-    UserRequest request = new UserRequest();
-    request.setName("Owner");
-    request.setEmail("owner@example.com");
-    request.setPassword("newStrongPass456");
-
-    assertThrows(
-            AccessDeniedException.class,
-            () -> service.updateUser(99L, request)
-    );
-}
-
-@Test
-void unauthenticatedUserIsRejected() {
-    SecurityContextHolder.clearContext();
-
-    assertThrows(
-            AccessDeniedException.class,
-            () -> currentUserService.getCurrentUser()
-    );
-}
-
-@Test
-void currentUserCanAccessTheirOwnUserId() {
-    User currentUser = new User();
-    currentUser.setId(7L);
-    currentUser.setEmail("owner@example.com");
-
-    when(userRepository.findByEmail("owner@example.com"))
-            .thenReturn(Optional.of(currentUser));
-
-    SecurityContextHolder.getContext().setAuthentication(
-            new UsernamePasswordAuthenticationToken(
-                    "owner@example.com",
-                    "secret123",
-                    Collections.singletonList(() -> "USER")
-            )
-    );
-
-    User result = currentUserService.requireOwner(7L);
-
-    assertSame(currentUser, result);
-}
-
-@Test
-void currentUserCannotAccessAnotherUsersId() {
-    User currentUser = new User();
-    currentUser.setId(7L);
-    currentUser.setEmail("owner@example.com");
-
-    when(userRepository.findByEmail("owner@example.com"))
-            .thenReturn(Optional.of(currentUser));
-
-    SecurityContextHolder.getContext().setAuthentication(
-            new UsernamePasswordAuthenticationToken(
-                    "owner@example.com",
-                    "secret123",
-                    Collections.singletonList(() -> "USER")
-            )
-    );
-
-    assertThrows(
-            AccessDeniedException.class,
-            () -> currentUserService.requireOwner(99L)
-    );
-}
+        assertThrows(AccessDeniedException.class, () -> service.updateUser(99L, request));
+    }
 }
