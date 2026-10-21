@@ -40,3 +40,5 @@ application-local.yml
 # OS files
 .DS_Store
 Thumbs.db
+# Separated frontend local files
+/frontend/
